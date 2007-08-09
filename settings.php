@@ -8,7 +8,7 @@
         'hostname'        => 'example.org',
         'url'             => 'testapp',
         'port'            => 80,
-        'webaddress'      => 'example.org/testapp',
+        'webaddress'      => 'http://example.org/testapp',
         'timezone'        => 'UTC',
         'language'        => 'en',
         'databases'       => array( // prefix all keys with "db"

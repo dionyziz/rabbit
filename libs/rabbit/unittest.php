@@ -1,7 +1,10 @@
 <?php
-    abstract class Testcase {
+    class Testcase {
         protected $mTester;
         
+        public function Testcase() {
+            
+        }
         protected function AssertNull( $actual, $message = '' ) {
             $this->InformTester(
                 New TestResult( is_null( $actual ), $message, $actual, null )
@@ -37,6 +40,36 @@
         public function SetTester( Tester $tester ) {
             $this->mTester = $tester;
         }
+    }
+    
+    function Tests_Get() { // fetch a list of all tests
+        global $rabbit_settings;
+        
+        $ret = array();
+        
+        $queue = array( $rabbit_settings[ 'rootdir' ] . '/tests' );
+        while ( !empty( $queue ) ) {
+            $item = array_pop( $queue );
+            $dh = opendir( $item );
+            while ( false !== ( $df = readdir( $dh ) ) ) {
+                switch ( $df ) {
+                    case '.':
+                    case '..':
+                        break;
+                    default:
+                        if ( is_dir( $item . '/' . $df ) ){
+                            array_push( $queue, $item . '/' . $df );
+                        }
+                        else if ( substr( $df, -strlen( '.php' ) ) == '.php' ) {
+                            $testcase = require $item . '/' . $df;
+                            w_assert( $testcase instanceof Testcase, "File $item/$df is not a valid Rabbit Testcase" );
+                            $ret[] = $testcase;
+                        }
+                }
+            }
+        }
+        
+        return $ret;
     }
     
     class Tester {

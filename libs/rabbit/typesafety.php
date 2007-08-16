@@ -40,6 +40,27 @@
         }
     }
     
+    abstract class tArray extends tBaseType {
+        protected $mValues;
+        
+        public function tArray( $values, $basetype ) {
+            w_assert( is_string( $basetype ) );
+            w_assert( class_exists( $basetype ) );
+            $baseclass = New ReflectionClass( $basetype );
+            w_assert( $baseclass->isSubclassOf( New ReflectionClass( 'tBaseType' ) ) );
+            
+            $this->mValues = array();
+            foreach ( $values as $value ) {
+                $this->mValues[] = New $basetype( $value ); // MAGIC!
+            }
+        }
+        public function Get() {
+            global $water;
+            
+            $water->ThrowException( 'Type Get() cannot be used on tArray; iterate over single values and ->Get() on them instead' );
+        }
+    }
+    
     final class tCoalaPointer extends tString {
         private $mExists;
         
@@ -54,7 +75,7 @@
         public function Get() {
             global $water;
             
-            $water->ThrowException( 'Type Get() cannot be used tCoalaPointer; use "echo" directly with your pointer instead' );
+            $water->ThrowException( 'Type Get() cannot be used on tCoalaPointer; use "echo" directly with your pointer instead' );
         }
         public function __toString() {
             return $this->mValue;

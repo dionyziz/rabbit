@@ -19,7 +19,8 @@
     	return array(
     		""                 	=> "home",
             'example'           => 'mypage',
-            'debug'             => 'admin/water'
+            'debug'             => 'developer/water',
+            'unittest'          => 'developer/test'
     	);
     }
 ?>

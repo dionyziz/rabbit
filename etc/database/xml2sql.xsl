@@ -127,6 +127,19 @@
                                     <xsl:otherwise><xsl:value-of select="@default" /></xsl:otherwise>
                                 </xsl:choose>'</span>
                             </xsl:when>
+                            <xsl:when test="@type='char'">
+                                <a href="http://dev.mysql.com/doc/refman/5.0/en/char.html"><span class="type">CHAR</span></a><span class="type">(<xsl:choose test="">
+                                        <xsl:when test="not(@length)">32</xsl:when>
+                                        <xsl:otherwise>
+                                            <xsl:value-of select="@length" />
+                                        </xsl:otherwise>
+                                </xsl:choose>) </span>
+                                <a href="http://dev.mysql.com/doc/refman/5.1/en/data-type-defaults.html"><span class="keyword">DEFAULT</span></a>
+                                <span class="string"> '<xsl:choose>
+                                    <xsl:when test="not(@default)"></xsl:when>
+                                    <xsl:otherwise><xsl:value-of select="@default" /></xsl:otherwise>
+                                </xsl:choose>'</span>
+                            </xsl:when>
                             <xsl:when test="@type='enum'">
                                 <a href="http://dev.mysql.com/doc/refman/5.0/en/enum.html"><span class="type">ENUM</span></a>
                                 (<xsl:for-each select="value">

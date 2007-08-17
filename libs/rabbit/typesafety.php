@@ -44,10 +44,12 @@
         protected $mValues;
         
         public function tArray( $values, $basetype ) {
-            w_assert( is_string( $basetype ) );
-            w_assert( class_exists( $basetype ) );
+            w_assert( is_string( $basetype ), '$basetype, second parameter to tArray constructor from your custom type, must be a string' );
+            w_assert( class_exists( $basetype ), '$basetype, second parameter to tArray constructor from your custom type, cannot be the empty string' );
+            
             $baseclass = New ReflectionClass( $basetype );
-            w_assert( $baseclass->isSubclassOf( New ReflectionClass( 'tBaseType' ) ) );
+            
+            w_assert( $baseclass->isSubclassOf( New ReflectionClass( 'tBaseType' ) ), '$basetype, second parameter to tArray constructor from your custom type-safe type, is expected to be a string of a class name derived from tBaseType' );
             
             $this->mValues = array();
             foreach ( $values as $value ) {

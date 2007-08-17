@@ -1,9 +1,17 @@
 <?php
     class Testcase {
         protected $mTester;
+        protected $mName;
         
         public function Testcase() {
-            
+        }
+        public function SetName( $name ) {
+            w_assert( is_string( $name ) );
+            w_assert( !empty( $name ) );
+            $this->mName = $name;
+        }
+        public function Name() {
+            return $this->mName;
         }
         protected function AssertNull( $actual, $message = '' ) {
             $this->InformTester(
@@ -42,7 +50,7 @@
         }
     }
     
-    function Tests_Get() { // fetch a list of all tests
+    function Test_GetTestcases() { // fetch a list of all testcases
         global $rabbit_settings;
         
         $ret = array();
@@ -63,6 +71,7 @@
                         else if ( substr( $df, -strlen( '.php' ) ) == '.php' ) {
                             $testcase = require $item . '/' . $df;
                             w_assert( $testcase instanceof Testcase, "File $item/$df is not a valid Rabbit Testcase" );
+                            $testcase->SetName( substr( $item . '/' . $df, strlen( $rabbit_settings[ 'rootdir' ] . '/tests/' ), -strlen( '.php' ) ) );
                             $ret[] = $testcase;
                         }
                 }

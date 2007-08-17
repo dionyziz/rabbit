@@ -40,7 +40,7 @@
         }
     }
     
-    abstract class tArray extends tBaseType {
+    abstract class tArray extends tBaseType implements Iterator {
         protected $mValues;
         
         public function tArray( $values, $basetype ) {
@@ -54,13 +54,52 @@
                 $this->mValues[] = New $basetype( $value ); // MAGIC!
             }
         }
+        public function rewind() {
+            return reset($this->var);
+        }
+        public function current() {
+            return current($this->mValues);
+        }
+        public function key() {
+            return key($this->mValues);
+        }
+        public function next() {
+            return next($this->mValues);
+        }
+        public function valid() {
+            return $this->current() !== false;
+        }
         public function Get() {
             global $water;
             
-            $water->ThrowException( 'Type Get() cannot be used on tArray; iterate over single values and ->Get() on them instead' );
+            $water->ThrowException( 'Type Get() cannot be used on tArray; iterate over tArray and ->Get() on each value instead' );
         }
     }
     
+    final class tIntegerArray extends tArray {
+        public function tIntegerArray( $values ) {
+            $this->tArray( $values, 'tInteger' );
+        }
+    }
+
+    final class tFloatArray extends tArray {
+        public function tFloatArray( $values ) {
+            $this->tArray( $values, 'tFloat' );
+        }
+    }
+    
+    final class tBooleanArray extends tArray {
+        public function tBooleanArray( $values ) {
+            $this->tArray( $values, 'tBoolean' );
+        }
+    }
+
+    final class tStringArray extends tArray {
+        public function tStringArray( $values ) {
+            $this->tArray( $values, 'tString' );
+        }
+    }
+
     final class tCoalaPointer extends tString {
         private $mExists;
         

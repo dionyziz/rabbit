@@ -52,12 +52,19 @@
             w_assert( $baseclass->isSubclassOf( New ReflectionClass( 'tBaseType' ) ), '$basetype, second parameter to tArray constructor from your custom type-safe type, is expected to be a string of a class name derived from tBaseType' );
             
             $this->mValues = array();
+            if ( empty( $values ) ) { // false
+                return;
+            }
+            if ( !is_array( $values ) ) {
+                // single array value
+                $values = array( $values );
+            }
             foreach ( $values as $value ) {
                 $this->mValues[] = New $basetype( $value ); // MAGIC!
             }
         }
         public function rewind() {
-            return reset($this->var);
+            return reset($this->mValues);
         }
         public function current() {
             return current($this->mValues);
@@ -125,6 +132,8 @@
 
     function Rabbit_TypeSafe_Call( $function , $req ) {
         global $water;
+        
+        w_assert( is_array( $req ) );
         
         // reflect!
         $basetype = New ReflectionClass( 'tBaseType' );

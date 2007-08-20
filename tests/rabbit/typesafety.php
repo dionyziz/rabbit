@@ -31,27 +31,35 @@
             $this->Assert( class_exists( 'tBoolean'      ), 'tBoolean class does not exist'      );
             $this->Assert( class_exists( 'tString'       ), 'tString class does not exist'       );
             $this->Assert( class_exists( 'tCoalaPointer' ), 'tCoalaPointer class does not exist' );
+            $this->Assert( class_exists( 'tArray'        ), 'tArray class does not exist'        );
+            $this->Assert( class_exists( 'tIntegerArray' ), 'tIntegerArray class does not exist' );
+            $this->Assert( class_exists( 'tFloatArray'   ), 'tFloatArray class does not exist'   );
+            $this->Assert( class_exists( 'tBooleanArray' ), 'tBooleanArray class does not exist' );
+            $this->Assert( class_exists( 'tStringArray'  ), 'tStrinArray class does not exist'   );
         }
         public function TestFunctionsExist() {
             $this->Assert( function_exists( 'Rabbit_TypeSafe_Call' ), 'Rabbit_TypeSafe_Call function does not exist' );
         }
         public function TestTypesafeCall() {
             unset( $GLOBALS[ 'TestRabbitTypeSafety_ExampleNoArguments' ] );
-            $this->AssertEquals( 'example', Rabbit_TypeSafe_Call( 'TestRabbitTypeSafety_ExampleNoArguments' ) );
+            $this->AssertEquals( 'example', Rabbit_TypeSafe_Call( 'TestRabbitTypeSafety_ExampleNoArguments', array() ) );
             $this->AssertNotNull( $GLOBALS[ 'TestRabbitTypeSafety_ExampleNoArguments' ], 'Rabbit_TypeSafe_Call does not invoke function' );
             unset( $GLOBALS[ 'TestRabbitTypeSafety_ExampleNoArguments' ] );
-            $this->AssertEquals( 6, Rabbit_TypeSafe_Call( 'TestRabbitTypeSafety_ExampleInteger', 5 ) );
-            $this->AssertEquals( '.hello', Rabbit_TypeSafe_Call( 'TestRabbitTypeSafety_ExampleString', 'hello' ) );
-            $this->AssertEquals( true, Rabbit_TypeSafe_Call( 'TestRabbitTypeSafety_ExampleBoolean', false ) );
-            $this->AssertEquals( false, Rabbit_TypeSafe_Call( 'TestRabbitTypeSafety_ExampleBoolean', true ) );
-            $this->AssertEquals( 1.1, Rabbit_TypeSafe_Call( 'TestRabbitTypeSafety_ExampleFloat', 0.6 ) );
+            $this->AssertEquals( 6, Rabbit_TypeSafe_Call( 'TestRabbitTypeSafety_ExampleInteger', array( 'int' => 5 ) ) );
+            $this->AssertEquals( '.hello', Rabbit_TypeSafe_Call( 'TestRabbitTypeSafety_ExampleString', array( 'str' => 'hello' ) ) );
+            $this->AssertEquals( true, Rabbit_TypeSafe_Call( 'TestRabbitTypeSafety_ExampleBoolean', array( 'bool' => false ) ) );
+            $this->AssertEquals( false, Rabbit_TypeSafe_Call( 'TestRabbitTypeSafety_ExampleBoolean', array( 'bool' => true ) ) );
+            $this->AssertEquals( 1.1, Rabbit_TypeSafe_Call( 'TestRabbitTypeSafety_ExampleFloat', array( 'float' => 0.6 ) ) );
             $this->AssertEquals( 
                 array( 3, 0.2, false, 't' ), 
-                Rabbit_TypeSafe_Call( 'TestRabbitTypeSafety_ExampleMultiple', array( 3, 0.2, false, 't' ) ) 
+                Rabbit_TypeSafe_Call( 'TestRabbitTypeSafety_ExampleMultiple', array( 'int' => 3, 'float' => 0.2, 'bool' => false, 'str' => 't' ) ) 
             );
             ob_start();
-            echo Rabbit_TypeSafe_Call( 'TestRabbitTypeSafety_CoalaPtr', 'xxx' );
+            echo Rabbit_TypeSafe_Call( 'TestRabbitTypeSafety_CoalaPtr', array( 'ptr' => 'xxx' ) );
             $this->AssertEquals( ob_get_clean(), 'xxx' );
+        }
+        public function TestArgumentOrder() {
+            $this->AssertEquals( 0.5, Rabbit_TypeSafe_Call( 'TestRabbitTypeSafety_ExampleFloat', array( 'hohohoinvalid' => 0.6 ) ) );
         }
     }
     

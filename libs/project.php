@@ -20,7 +20,7 @@
     		""                 	=> "home",
             'example'           => 'mypage',
             'debug'             => 'developer/water',
-            'unittest'          => 'developer/test'
+            'unittest'          => 'developer/test/view'
     	);
     }
 ?>

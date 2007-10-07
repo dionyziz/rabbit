@@ -1,10 +1,10 @@
 <?php
 
 class XMLNode {
-    private $mNodeName;
     private $mChildNodes; // array of XMLNodes or strings
     private $mAttributes; // array key => value
     public $parentNode;
+    public $nodeName;
     
     public function XMLNode( $name ) {
         $this->nodeName = $name;

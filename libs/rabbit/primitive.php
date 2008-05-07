@@ -51,15 +51,16 @@
     // to make debugging the libraries system easier
 	$libs = require_once 'libs/rabbit/lib.php';
 
-    // load the trivial libraries
-    $libs->Load( 'rabbit/trivial/trivial' );
+    // load the helper libraries
+    $libs->Load( 'rabbit/helpers/helpers' );
+    
+    if ( !function_exists( 'ValidURL' ) ) {
+        throw New Exception( 'Could not load the Rabbit trivial libraries; check your "rootdir" setting in your settings.php file?' );
+    }
     
     if ( strlen( $_SERVER[ 'REQUEST_METHOD' ] ) ) { // if we're running on a web environment
         w_assert( isset( $rabbit_settings[ 'webaddress' ] )    , "`webaddress' setting is not defined in a web environment" );
         w_assert( is_string( $rabbit_settings[ 'webaddress' ] ), "`webaddress' setting must be a string" );
-        w_assert( isset( $rabbit_settings[ 'hostname' ] )      , "`hostname' setting is not defined in a web environment" );
-        w_assert( is_string( $rabbit_settings[ 'hostname' ] )  , "`hostname' setting must be a string" );
-        w_assert( strlen( $rabbit_settings[ 'hostname' ] ) >= 2, "`hostname' setting must be at least two characters long" );
         w_assert( isset( $rabbit_settings[ 'url' ] )           , "`url' setting is not defined in a web environment" );
         w_assert( is_string( $rabbit_settings[ 'url' ] )       , "`url' setting must be a string" );
         w_assert( isset( $rabbit_settings[ 'port' ] )          , "`port' setting not defined in a web environment" );
@@ -74,12 +75,14 @@
         $httphost = $_SERVER[ 'HTTP_HOST' ];
         $httphost = explode( ':', $httphost );
         $httphost = strtolower( $httphost[ 0 ] );
-    	if ( $httphost != strtolower( $rabbit_settings[ 'hostname' ] ) ) {
-    		header( 'HTTP/1.1 301 Moved Permanently' );
-            // TODO: append part of the original URL to the redirection URL?
-    		header( 'Location: ' . $rabbit_settings[ 'webaddress' ] . '/' );
-    		exit();
-    	}
+        if ( $rabbit_settings[ 'hostname' ] !== false ) {
+            w_assert( is_string( $rabbit_settings[ 'hostname' ] ) );
+        	if ( $httphost != strtolower( $rabbit_settings[ 'hostname' ] ) ) {
+        		header( 'HTTP/1.1 301 Moved Permanently' );
+        		header( 'Location: ' . $rabbit_settings[ 'webaddress' ] . '/' );
+        		exit();
+        	}
+        }
     }
     
     // define timezone, as of PHP 5.1.0
@@ -87,15 +90,13 @@
 		date_default_timezone_set( $rabbit_settings[ 'timezone' ] );
 	}
 	
-	session_start(); // this needs to be performed before unregister_GLOBALS so that session variables get injected into the main scope
-
 	// manual register_globals off
 	registerglobals_off(); 
 	magicquotes_off();
 
     $libs->Load( 'rabbit/typesafety' );
+    $libs->Load( 'rabbit/activerecord/satori' );
 	$libs->Load( 'rabbit/db/db' );
-    $libs->Load( 'rabbit/satori' );
     
     // set up databases
     if (    isset(    $rabbit_settings[ 'databases' ] ) 
@@ -116,8 +117,8 @@
             }
             
             if ( isset( $database[ 'driver' ] ) ) {
-                w_assert( class_exists( 'DatabaseDriver_' . $database[ 'driver' ] ), 'Database driver \'' . $database[ 'driver' ] . '\' used for database alias $' . $dbname . ' is invalid' );
-                $drivername = 'DatabaseDriver_' . $database[ 'driver' ];
+                w_assert( class_exists( 'DBDriver_' . $database[ 'driver' ] ), 'Database driver \'' . $database[ 'driver' ] . '\' used for database alias $' . $dbname . ' is invalid' );
+                $drivername = 'DBDriver_' . $database[ 'driver' ];
                 $driver = New $drivername(); // MAGIC
             }
             else {
@@ -132,8 +133,11 @@
             $GLOBALS[ $dbname ]->Authenticate( $database[ 'username' ] , $database[ 'password' ] );
             $GLOBALS[ $dbname ]->SetCharset( $database[ 'charset' ] );
             
-            foreach ( $database[ 'tables' ] as $tablename => $realtablename ) {
-                $GLOBALS[ $tablename ] = $database[ 'prefix' ] . $realtablename;
+            foreach ( $database[ 'tables' ] as $alias => $tablename ) {
+                if ( is_int( $alias ) ) {
+                    $alias = $tablename;
+                }
+                $GLOBALS[ $dbname ]->AttachTable( $alias, $database[ 'prefix' ] . $tablename );
             }
         }
     }
@@ -147,4 +151,13 @@
 
     $libs->Load( 'rabbit/page/page' );
     $libs->Load( 'project' );
+
+    if ( function_exists( 'Project_OnBeforeSessionStart' ) ) {
+        Project_OnBeforeSessionStart();
+    }
+	session_start(); 
+    registerglobals_off(); // this needs to be performed again now that session_start has been fired
+    if ( function_exists( 'Project_OnAfterSessionStart' ) ) {
+        Project_OnAfterSessionStart();
+    }
 ?>

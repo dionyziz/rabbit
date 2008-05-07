@@ -6,25 +6,47 @@ var Coala = {
 	StoredObjects: [],
 	ThreadedRequests: [],
 	LazyCommit: null,
-	Cold: function ( unitid , parameters ) {
-		this._AppendRequest( unitid , parameters , 'cold' );
-		this.LazyCommit = setTimeout( 'Coala.Commit()' , 50 );
+    Frozen: function ( unitid, parameters, failurecallback ) { // get, cacheable client-side (doesn't have to be public -- not necessarily squidable)
+        if ( Coala.ThreadedRequests.length ) {
+            // force commit of any queued requests
+            Coala.Commit();
+        }
+        // send frozen call separately
+        this._AppendRequest( unitid, parameters, 'frozen', failurecallback );
+        Coala.Commit();
+    },
+	Cold: function ( unitid, parameters, failurecallback ) { // get, non-cacheable
+        this._AppendRequest( unitid, parameters, 'cold', failurecallback );
+		this.LazyCommit = setTimeout( function () {
+            Coala.Commit();
+        }, 50 );
 	},
-	Warm: function ( unitid , parameters ) {
-		this._AppendRequest( unitid , parameters , 'warm' );
-		this.LazyCommit = setTimeout( 'Coala.Commit()' , 50 );
+	Warm: function ( unitid, parameters, failurecallback ) { // post
+		this._AppendRequest( unitid, parameters, 'warm', failurecallback );
+		this.LazyCommit = setTimeout( function () {
+            Coala.Commit();
+        }, 50 );
 	},
-	_AppendRequest: function ( unitid , parameters , type ) {
+	_AppendRequest: function ( unitid, parameters, type, failurecallback ) {
+        if ( typeof unitid === 'undefined' ) {
+            alert( 'No coala call unitid specified; aborting call' );
+            return;
+        }
+        if ( typeof parameters === 'undefined' ) {
+            alert( 'No coala call parameters specified; aborting call' );
+            return;
+        }
 		Coala.ThreadedRequests.push( 
 			{ 
-				'unitid' : unitid , 
-				'parameters' : parameters , 
-				'type' : type 
-			} 
+				'unitid'          : unitid , 
+				'parameters'      : parameters , 
+				'type'            : type ,
+                'failurecallback' : failurecallback
+			}
 		);
 	},
 	Commit: function () {
-		if ( Coala.ThreadedRequests.length == 0 ) {
+		if ( Coala.ThreadedRequests.length === 0 ) {
 			// nothing to commit
 			return;
 		}
@@ -32,12 +54,19 @@ var Coala = {
 		request = { 'ids' : '' };
 		ids = [];
 		warm = false;
+        failurecallbacks = [];
 		for ( i in Coala.ThreadedRequests ) {
 			args = [];
+            if ( typeof Coala.ThreadedRequests[ i ].failurecallback !== 'undefined' ) {
+                failurecallbacks.push(
+                    Coala.ThreadedRequests[ i ].failurecallback
+                );
+            }
 			for ( j in Coala.ThreadedRequests[ i ].parameters ) {
                 switch ( typeof( Coala.ThreadedRequests[ i ].parameters[ j ] ) ) {
                     case 'object': // object or array
                     case 'function': // function
+                        // create coala pointer
     					Coala.StoredObjects[ Coala.StoredObjects.length ] = Coala.ThreadedRequests[ i ].parameters[ j ];
     					arg = 'Coala.StoredObjects[' + ( Coala.StoredObjects.length - 1 ) + ']';
                         break;
@@ -64,6 +93,9 @@ var Coala = {
 				case 'cold':
 					symbol = '~';
 					break;
+                case 'frozen':
+                    symbol = '_';
+                    break;
 				default:
 					alert( 'Invalid coala call type' );
 			}
@@ -76,15 +108,15 @@ var Coala = {
 			method = 'get';
 		}
 		request.ids = ids.join( ':' );
-		this._PlaceRequest( request , method );
+		this._PlaceRequest( request, method, failurecallbacks );
 		Coala.ThreadedRequests = [];
 	},
-	_PlaceRequest: function ( request , method ) {
-		if ( request == null ) {
+	_PlaceRequest: function ( request, method, failurecallbacks ) {
+		if ( request === null ) {
 			request = {};
 		}
-		Socket = this._AJAXSocket(); // instanciate new socket object
-		if ( Socket == null ) {
+		Socket = new this._AJAXSocket(); // instanciate new socket object
+		if ( Socket === null ) {
 			// this shouldn't happen; browser is not XMLHTTP-compatible
 			return false;
 		}
@@ -92,15 +124,37 @@ var Coala = {
 		for ( parameter in request ) {
 			realparameters.push( encodeURIComponent( parameter ) + '=' + encodeURIComponent( request[ parameter ] ) );
 		}
-		Socket.connect( "coala.php" , method , realparameters.join( '&' ) , this._Callback );
+		Socket.connect( "coala.php" , method , realparameters.join( '&' ) , function ( xh ) {
+            Coala._Callback( xh, failurecallbacks );
+        } );
 		return true; // successfully pushed request
 	},
-	_Callback: function ( xh ) {
+	_Callback: function ( xh, failurecallbacks ) {
 		if ( xh.readyState != 4 ) {
-			alert( "An XMLHTTP error has occured. Please try again later" );
+            for ( i = 0; i < failurecallbacks.length; ++i ) {
+                failurecallbacks[ i ]( 0 );
+            }
 			return;
 		}
-        if ( typeof water_debug_data != 'undefined' ) {
+		try {
+			if ( typeof xh.status !== 'undefined' && xh.status !== 0){
+				httpStatus = xh.status;
+			}
+			else {
+				httpStatus = 13030;
+			}
+		}
+		catch ( e ) {
+            httpStatus = 13030;
+		}
+        
+        if ( httpStatus < 200 || httpStatus > 300 && httpStatus !== 1223 ) {
+            for ( i = 0; i < failurecallbacks.length; ++i ) {
+                failurecallbacks[ i ]( httpStatus );
+            }
+            return;
+        }
+        if ( typeof water_debug_data !== 'undefined' ) {
             old_water_debug_data = water_debug_data;
         }
         else {
@@ -117,7 +171,7 @@ var Coala = {
         
         resp = resp.substr( 'while(1);'.length ); // JS hijacking prevention
 		eval( resp );
-		if ( water_debug_data ) {
+		if ( typeof water_debug_data !== 'undefined' ) {
 			coala_water_debug_data = water_debug_data; // could be used later, if water improves
 			water_debug_data = old_water_debug_data;
 		}
@@ -132,9 +186,10 @@ var Coala = {
 		// main connect function, used to perform an XMLHTTP request
 		this.connect = function( sURL , sMethod , sVars , fnDone ) {
 			// if we don't have an xmlhttp object there's no point in requesting anything
-			if ( !xh )
+			if ( !xh ) {
 				// just return false
 				return false;
+            }
 			// okay, let's get started; operation hasn't been completed yet
 			bComplete = false;
 			// make sure the method is uppercase ("GET" or "POST")
@@ -169,7 +224,7 @@ var Coala = {
 				// okay, after we've set up everything, we can safely send the request
 				xh.send(sVars);
 			}
-			catch( z ) { 
+			catch ( z ) { 
 				// woops, something went wrong
 				return false; 
 			}
@@ -184,17 +239,17 @@ var Coala = {
 			// ActiveX, Msxml2.XMLHTTP
 			xh = new ActiveXObject( "Msxml2.XMLHTTP" ); 
 		}
-		catch (e) { 
+		catch ( e1 ) {
 			try { 
 				// ActiveX, Microsoft.XMLHTTP
 				xh = new ActiveXObject( "Microsoft.XMLHTTP" ); 
 			}
-			catch (e) { 
+			catch ( e2 ) { 
 				try { 
 					// non-ActiveX, normal class (used by everyone apart from microsoft ._.)
 					xh = new XMLHttpRequest(); 
 				}
-				catch (e) { 
+				catch ( e3 ) { 
 					// last catch, exceptions everywhere, can't create XMLHTTP
 					xh = false; 
 				}
@@ -202,8 +257,9 @@ var Coala = {
 		}
 		
 		// no xmlhttp object was created, the constructor should return null
-		if ( !xh )
+		if ( !xh ) {
 			return null;
+        }
 		
 		// return the newly created class
 		return this;

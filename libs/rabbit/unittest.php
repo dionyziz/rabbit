@@ -1,35 +1,47 @@
 <?php
-    class Testcase {
+    /*
+        Developer: Dionyziz
+    */
+    
+    abstract class Testcase extends Overloadable {
         protected $mTester;
         protected $mName;
+        protected $mAppliesTo;
         
-        public function Testcase() {
+        final public function Testcase() {
         }
-        public function SetName( $name ) {
+        public function SetUp() { // overridable
+        }
+        public function TearDown() { // overridable
+        }
+        final public function AppliesTo() {
+            return $this->mAppliesTo;
+        }
+        protected function SetName( $name ) {
             w_assert( is_string( $name ) );
             w_assert( !empty( $name ) );
             $this->mName = $name;
         }
-        public function Name() {
+        protected function GetName() {
             return $this->mName;
         }
         protected function AssertNull( $actual, $message = '' ) {
-            $this->InformTester(
+            return $this->InformTester(
                 New AssertResult( is_null( $actual ), $message, $actual, null )
             );
         }
         protected function AssertNotNull( $actual, $message = '' ) {
-            $this->InformTester(
+            return $this->InformTester(
                 New AssertResult( !is_null( $actual ), $message, $actual, null )
             );
         }
         protected function AssertEquals( $expected, $actual, $message = '' ) {
-            $this->InformTester(
+            return $this->InformTester(
                 New AssertResult( $actual === $expected, $message, $actual, $expected )
             );
         }
         protected function AssertNotEquals( $notexpected, $actual, $message = '' ) {
-            $this->InformTester(
+            return $this->InformTester(
                 New AssertResult( $actual != $expected, $message, $actual, $expected )
             );
         }
@@ -37,13 +49,36 @@
             return $this->AssertEquals( true, ( bool )$actual, $message ); // ==
         }
         protected function AssertTrue( $actual, $message = '' ) {
-            return $this->AssertEquals( true, $actual, $message ); // ===
+            if ( !is_bool( $actual ) ) {
+                return $this->InformTester(
+                    New AssertResult( false, $message, $actual, true )
+                );
+            }
+            if ( $actual != true ) {
+                return $this->InformTester(
+                    New AssertResult( false, $message, false, true )
+                );
+            }
         }
         protected function AssertFalse( $actual, $message = '' ) {
-            return $this->AssertEquals( false, $actual, $message ); // ===
+            if ( !is_bool( $actual ) ) {
+                return $this->InformTester(
+                    New AssertResult( false, $message, $actual, false )
+                );
+            }
+            if ( $actual != false ) {
+                return $this->InformTester(
+                    New AssertResult( false, $message, true, false )
+                );
+            }
+        }
+        protected function RequireSuccess( AssertResult $result ) {
+            if ( !$result->Success ) {
+                $this->mTester->RequireFailed( $result );
+            }
         }
         protected function InformTester( AssertResult $result ) {
-            $this->mTester->Inform( $result );
+            return $this->mTester->Inform( $result );
         }
         public function SetTester( Tester $tester ) {
             $this->mTester = $tester;
@@ -52,6 +87,7 @@
     
     function Test_GetTestcases() { // fetch a list of all testcases
         global $rabbit_settings;
+        global $water;
         
         $ret = array();
         
@@ -70,9 +106,20 @@
                         }
                         else if ( substr( $df, -strlen( '.php' ) ) == '.php' ) {
                             $testcase = require $item . '/' . $df;
-                            w_assert( $testcase instanceof Testcase, "File $item/$df is not a valid Rabbit Testcase" );
-                            $testcase->SetName( substr( $item . '/' . $df, strlen( $rabbit_settings[ 'rootdir' ] . '/tests/' ), -strlen( '.php' ) ) );
-                            $ret[] = $testcase;
+                            if ( !( $testcase instanceof Testcase ) ) {
+                                $water->Warning( "File $item/$df is not a valid Rabbit Testcase; skipping" );
+                            }
+                            else {
+                                $appliesto = $testcase->AppliesTo();
+                                $fileloadresult = Mask( $appliesto );
+                                if ( isset( $fileloadresult[ 'error' ] ) ) {
+                                    $water->Warning( "Rabbit Testcase $item/$df did not specify a valid 'mAppliesTo' path; skipping" );
+                                }
+                                else {
+                                    $testcase->Name = substr( $item . '/' . $df, strlen( $rabbit_settings[ 'rootdir' ] . '/tests/' ), -strlen( '.php' ) );
+                                    $ret[] = $testcase;
+                                }
+                            }
                         }
                 }
             }
@@ -81,11 +128,37 @@
         return $ret;
     }
     
+    function Test_VarDump( $var ) {
+        if ( is_scalar( $var ) ) {
+            return var_dump( $var );
+        }
+        if ( is_object( $var ) ) {
+            ?>[ <?php 
+            echo get_class( $var );
+            ?> object: <?php
+            echo ( string )$var;
+            ?> ]<?php
+            return;
+        }
+        if ( is_array( $var ) ) {
+            ?>[ array of <?php 
+            echo count( $var );
+            ?> items: <?php
+            foreach ( $var as $key => $value ) {
+                Test_VarDump( $key );
+                ?> => <?php
+                Test_VarDump( $value );
+            }
+            ?> ]<?php
+        }
+    }
+    
     class Tester {
         protected $mTestResults;
         protected $mTestcases;
         protected $mAssertResults;
-        
+        protected $mRequirementsFullfilled;
+
         public function Tester() {
             $this->mTestcases = array();
         }
@@ -98,20 +171,43 @@
             $water->Profile( 'Running ' . count( $this->mTestcases ) . ' testcases' );
             $this->mTestcaseResults = array();
             foreach ( $this->mTestcases as $i => $testcase ) {
-                $water->Profile( 'Running testcase ' . $testcase->Name() );
-                $testcase->SetTester( $this );
+                $water->Profile( 'Running testcase ' . $testcase->Name );
+                $testcase->SetTester( $this ); // allows testcase to report results back to this tester
                 $obj = New ReflectionObject( $testcase );
                 $methods = $obj->getMethods();
                 $runresults = array();
-                foreach ( $methods as $method ) {
-                    $methodname = $method->getName();
-                    if ( $method->isPublic() && substr( $methodname, 0, strlen( 'Test' ) ) == 'Test' && $methodname != 'Testcase' ) {
-                        $water->Profile( 'Running testrun ' . $methodname );
-                        $this->mAssertResults = array();
-                        call_user_func( array( $testcase, $methodname ) ); // MAGIC
-                        $runresults[] = New RunResult( $this->mAssertResults, $methodname );
-                        $water->ProfileEnd();
+                try {
+                    $testcase->SetUp();
+                    $goodtogo = true;
+                }
+                catch ( Exception $e ) {
+                    $runresults[] = New RunResultFailedByException( '[SetUp]', $e->getMessage() );
+                    $goodtogo = false;
+                }
+                if ( $goodtogo ) {
+                    foreach ( $methods as $method ) {
+                        $methodname = $method->getName();
+                        if ( $method->isPublic() && substr( $methodname, 0, strlen( 'Test' ) ) == 'Test' && $methodname != 'Testcase' ) {
+                            $water->Profile( 'Running testrun ' . $methodname );
+                            $this->mAssertResults = array();
+                            try {
+                                call_user_func( array( $testcase, $methodname ) ); // MAGIC
+                                $runresults[] = New RunResult( $this->mAssertResults, $methodname );
+                            }
+                            catch ( Exception $e ) {
+                                $runresults[] = New RunResultFailedByException( $methodname, $e->getMessage() );
+                                $water->ProfileEnd();
+                                break;
+                            }
+                            $water->ProfileEnd();
+                        }
                     }
+                }
+                try {
+                    $testcase->TearDown();
+                }
+                catch ( Exception $e ) {
+                    $runresults[] = New RunResultFailedByException( '[TearDown]', $e->getMessage() );
                 }
                 $this->mTestResults[ $i ] = New TestcaseResult( $testcase, $runresults );
                 $water->ProfileEnd();
@@ -123,10 +219,14 @@
         }
         public function Inform( AssertResult $result ) {
             $this->mAssertResults[] = $result;
+            return $result;
+        }
+        public function RequireFailed( AssertResult $result ) {
+            throw New Exception( "Required assertion failed yielding to immediate TearDown: " . $result->Message );
         }
     }
     
-    class TestcaseResult implements Iterator { // a group of run results, the results for a complete testcase
+    class TestcaseResult extends Overloadable implements Iterator { // a group of run results, the results for a complete testcase
         protected $mRunResults;
         protected $mTestcase;
         protected $mSuccess;
@@ -134,10 +234,10 @@
         protected $mNumSuccessfulRuns;
         protected $mNumAssertions;
         
-        public function Testcase() {
+        protected function GetTestcase() {
             return $this->mTestcase;
         }
-        public function Results() {
+        protected function GetResults() {
             return $this->mRunResults;
         }
         public function rewind() {
@@ -155,39 +255,40 @@
         public function valid() {
             return $this->current() !== false;
         }
-        public function NumRuns() {
+        protected function GetNumRuns() {
             return $this->mNumRuns;
         }
-        public function NumSuccessfulRuns() {
+        protected function GetNumSuccessfulRuns() {
             return $this->mNumSuccessfulRuns;
         }
-        public function NumAssertions() {
+        protected function GetNumAssertions() {
             return $this->mNumAssertions;
         }
-        public function Success() {
+        protected function GetSuccess() {
             return $this->mSuccess;
         }
         public function TestcaseResult( Testcase $testcase, array $runresults ) {
+            w_assert( is_array( $runresults ) );
             $this->mNumRuns = count( $runresults );
             $this->mNumSuccessfulRuns = 0;
             $this->mNumAssertions = 0;
             $this->mSuccess = true;
             foreach ( $runresults as $runresult ) {
                 w_assert( $runresult instanceof RunResult );
-                if ( $runresult->Success() ) {
+                if ( $runresult->Success ) {
                     ++$this->mNumSuccessfulRuns;
                 }
                 else {
                     $this->mSuccess = false;
                 }
-                $this->mNumAssertions += $runresult->NumAssertions();
+                $this->mNumAssertions += $runresult->NumAssertions;
             }
             $this->mTestcase = $testcase;
             $this->mRunResults = $runresults;
         }
     }
     
-    class RunResult implements Iterator { // a group of assertion results, a result of a test (function in the testcase class)
+    class RunResult extends Overloadable implements Iterator { // a group of assertion results, a result of a test (function in the testcase class)
         protected $mAssertionResults;
         protected $mSuccess;
         protected $mRunName;
@@ -209,16 +310,16 @@
         public function valid() {
             return $this->current() !== false;
         }
-        public function RunName() {
+        protected function GetRunName() {
             return $this->mRunName;
         }
-        public function Success() {
+        protected function GetSuccess() {
             return $this->mSuccess;
         }
-        public function NumAssertions() {
+        protected function GetNumAssertions() {
             return $this->mNumAssertions;
         }
-        public function NumSuccessfulAssertions() {
+        protected function GetNumSuccessfulAssertions() {
             return $this->mNumSuccessfulAssertions;
         }
         public function RunResult( array $assertionresults, $runname ) {
@@ -230,7 +331,7 @@
             $this->mNumSuccessfulAssertions = 0;
             foreach ( $assertionresults as $assertionresult ) {
                 w_assert( $assertionresult instanceof AssertResult );
-                if ( $assertionresult->Success() ) {
+                if ( $assertionresult->Success ) {
                     ++$this->mNumSuccessfulAssertions;
                 }
                 else {
@@ -241,22 +342,35 @@
         }
     }
     
-    class AssertResult { // most basic test, a simple assertion
+    class RunResultFailedByException extends RunResult {
+        protected $mExceptionMessage;
+        
+        protected function GetMessage() {
+            return $this->mExceptionMessage;
+        }
+        public function RunResultFailedByException( $runname, $exceptionmessage ) {
+            $this->mRunName = $runname;
+            $this->mExceptionMessage = $exceptionmessage;
+            $this->mSuccess = false;
+        }
+    }
+
+    class AssertResult extends Overloadable { // most basic test, a simple assertion
         protected $mSuccess;
         protected $mMessage;
         protected $mActual;
         protected $mExpected;
         
-        public function Success() {
+        protected function GetSuccess() {
             return $this->mSuccess;
         }
-        public function Message() {
+        protected function GetMessage() {
             return $this->mMessage;
         }
-        public function Actual() {
+        protected function GetActual() {
             return $this->mActual;
         }
-        public function Expected() {
+        protected function GetExpected() {
             return $this->mExpected;
         }
         public function AssertResult( $success, $message, $actual, $expected ) {

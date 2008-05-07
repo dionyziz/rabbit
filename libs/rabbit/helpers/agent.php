@@ -40,12 +40,14 @@
 	}
 
 	function UserIp() {
-		if ( isset($_SERVER["HTTP_CLIENT_IP"]) ) {
+		if ( isset( $_SERVER["HTTP_CLIENT_IP"] ) ) {
 			return ip2long( $_SERVER["HTTP_CLIENT_IP"] );
-		} else {
+		} 
+        else {
 			return ip2long( $_SERVER["REMOTE_ADDR"] );
-		}	
+		}
 	}
+
 	function BrowserByUseragent( $useragent ) {
 		$browser = array (
 			"MSIE",            // parent

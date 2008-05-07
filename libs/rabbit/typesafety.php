@@ -12,21 +12,21 @@
         }
     }
     
-    final class tInteger extends tBaseType {
+    class tInteger extends tBaseType {
         public function tInteger( $value ) {
             $this->mValue = ( integer )$value;
             $this->tBaseType( $value );
         }
     }
     
-    final class tFloat extends tBaseType {
+    class tFloat extends tBaseType {
         public function tFloat( $value ) {
             $this->mValue = ( float )$value;
             $this->tBaseType( $value );
         }
     }
     
-    final class tBoolean extends tBaseType {
+    class tBoolean extends tBaseType {
         public function tBoolean( $value ) {
             if ( $value === 'yes' || $value === 'true' || $value === '1' || $value === 1 ) {
                 $this->mValue = true;
@@ -87,37 +87,35 @@
             return $this->current() !== false;
         }
         public function Get() {
-            global $water;
-            
-            $water->ThrowException( 'Type Get() cannot be used on tArray; iterate over tArray and ->Get() on each value instead' );
+            throw New Exception( 'Type Get() cannot be used on tArray; iterate over tArray and ->Get() on each value instead' );
         }
     }
     
-    final class tIntegerArray extends tArray {
+    class tIntegerArray extends tArray {
         public function tIntegerArray( $values ) {
             $this->tArray( $values, 'tInteger' );
         }
     }
 
-    final class tFloatArray extends tArray {
+    class tFloatArray extends tArray {
         public function tFloatArray( $values ) {
             $this->tArray( $values, 'tFloat' );
         }
     }
     
-    final class tBooleanArray extends tArray {
+    class tBooleanArray extends tArray {
         public function tBooleanArray( $values ) {
             $this->tArray( $values, 'tBoolean' );
         }
     }
 
-    final class tStringArray extends tArray {
+    class tStringArray extends tArray {
         public function tStringArray( $values ) {
             $this->tArray( $values, 'tString' );
         }
     }
 
-    final class tCoalaPointer extends tString {
+    class tCoalaPointer extends tString {
         private $mExists;
         
         public function tCoalaPointer( $value ) {
@@ -129,18 +127,76 @@
             return $this->mExists;
         }
         public function Get() {
-            global $water;
-            
-            $water->ThrowException( 'Type Get() cannot be used on tCoalaPointer; use "echo" directly with your pointer instead' );
+            throw New Exception( 'Type Get() cannot be used on tCoalaPointer; use "echo" directly with your pointer instead' );
         }
         public function __toString() {
             return $this->mValue;
         }
     }
+    
+    class tFile extends tBaseType {
+        private $mName;
+        private $mMimetype;
+        private $mSize;
+        private $mTempname;
+        private $mErrorcode;
+        private $mExists;
+        
+        public function Exists() {
+            return $this->mExists;
+        }
+        public function __get( $name ) {
+            switch ( $name ) {
+                case 'Name':
+                    return $this->mName;
+                case 'Mimetype':
+                    return $this->mMimetype;
+                case 'Size':
+                    return $this->mSize;
+                case 'Tempname':
+                    return $this->mTempname;
+                case 'ErrorCode':
+                    return $this->mErrorCode;
+            }
+            // else return nothing
+        }
+        public function tFile( $value ) {
+            $this->mExists = false;
+            if ( !is_array( $value ) ) {
+                return;
+            }
+            if ( !isset( $value[ 'tmp_name' ] ) ) {
+                return;
+            }
+            if ( !is_uploaded_file( $value[ 'tmp_name' ] ) ) {
+                return;
+            }
+            if ( !isset( $value[ 'name' ] ) ) {
+                $value[ 'name' ] = '';
+            }
+            if ( !isset( $value[ 'type' ] ) ) {
+                $value[ 'type' ] = '';
+            }
+            if ( !isset( $value[ 'size' ] ) ) {
+                $value[ 'size' ] = 0;
+            }
+
+            $this->mExists    = true;
+            $this->mName      = $value[ 'name' ];
+            $this->mMimetype  = $value[ 'type' ]; // mime type, if the browser provided such information
+            $this->mSize      = $value[ 'size' ]; // in bytes
+            $this->mTempname  = $value[ 'tmp_name' ];
+            $this->mErrorcode = $value[ 'error' ];
+        }
+        public function __toString() {
+            return '[uploaded file: ' . $this->mName . ']';
+        }
+        public function Get() {
+            throw New Exception( 'Type Get() cannot be used on tFile; use build-in methods and attributes directly with your file object instead' );
+        }
+    }
 
     function Rabbit_TypeSafe_Call( $function , $req ) {
-        global $water;
-        
         w_assert( is_array( $req ) );
         
         // reflect!
@@ -152,11 +208,11 @@
             $paramname = $parameter->getName();
             $paramclass = $parameter->getClass();
             if ( !is_object( $paramclass ) ) {
-                $water->ThrowException( 'No type hinting specified for parameter ' . $paramname . ' of type-safe function ' . $function );
+                throw New Exception( 'No type hinting specified for parameter ' . $paramname . ' of type-safe function ' . $function );
             }
             else {
                 if ( !$paramclass->isSubclassOf( $basetype ) ) {
-                    $water->ThrowException( 'Type hint of parameter ' . $paramname . ' of type-safe function ' . $function . ' does not exist or is not derived from tBaseType' );
+                    throw New Exception( 'Type hint of parameter ' . $paramname . ' of type-safe function ' . $function . ' does not exist or is not derived from tBaseType' );
                 }
                 if ( isset( $req[ $paramname ] ) ) {
                     $params[] = $paramclass->newInstance( $req[ $paramname ] );

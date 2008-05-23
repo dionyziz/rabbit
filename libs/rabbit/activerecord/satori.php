@@ -379,7 +379,7 @@
             $this->mDbFields = array();
             $this->mDbFieldKeys = array();
             $this->mAutoIncrementField = false;
-
+            
             foreach ( $this->mDbColumns as $column ) {
                 $parts = explode( '_', $column->Name );
                 $attribute = ucfirst( $parts[ 1 ] );
@@ -404,7 +404,7 @@
             if ( !count( $this->mPrimaryKeyFields ) ) {
                 throw New SatoriException( 'Database table `' . $this->mDbTableAlias . '\' used for Satori class `' . get_class( $this ) . '\' does not have a primary key' );
             }
-
+            
             $this->mCurrentValues = array();
             foreach ( $this->mDbFields as $fieldname => $attributename ) {
                 w_assert( is_string( $fieldname ) );

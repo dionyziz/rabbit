@@ -1,0 +1,22 @@
+== 0.7.8974 ==
+=== Unit testing ===
+* Exceptional errors in test cases now do not surpass previous success or error messages in the same test run.
+* Bugfix: Successful assertion results of AssertFalse() in testcases are now reported correctly.    
+
+=== Active record ===
+* Optimization: Satori doesn't rebuild relations when an object is made persistent unless they have been used previously.
+* Optimization: Satori doesn't lookup target objects in relations whose primary key values in autoincrement columns are zero.
+* Introduced the new "locale" setting.
+* Added Satori events OnBeforeUpdate, OnBeforeCreate, OnBeforeDelete, and OnDelete.
+* Satori Delete function is no longer overridable -- use the relevant events for handling deletions.
+* Satori "Relations" are redefined when an object is made persistent to allow for manual morphing.
+
+=== Water ===
+* Undefined variables now throw exceptions.
+* Added water setting 'jsonstartdepth' to allow for limiting the depth of error reporting.
+
+
+== 0.7.7945 ==
+
+Initial public version.
+

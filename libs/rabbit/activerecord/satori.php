@@ -19,7 +19,12 @@
         protected abstract function MakeObj();
         protected abstract function Modified();
         public function Rebuild() {
-            if ( ( !is_object( $this->mRetrieved ) && $this->mRetrieved == 0 ) || $this->Modified() ) {
+            if ( ( !is_object( $this->mRetrieved ) && $this->mRetrieved == 0 ) ) {
+                // it hasn't even been BUILD, so no need to REbuild
+                return;
+            }
+            /* else */
+            if ( $this->Modified() ) {
                 $this->mRetrieved = $this->MakeObj();
             }
         }
@@ -257,6 +262,9 @@
                 throw New SatoriException( 'This object has modified read-only attributes; it cannot be made persistent' );
             }
             if ( $this->Exists() ) {
+                if ( $this->OnBeforeUpdate() === false ) {
+                    return false;
+                }
                 $sql = 'UPDATE
                             :' . $this->mDbTableAlias . '
                         SET
@@ -295,6 +303,10 @@
                     $query->Bind( $name, $value );
                 }
                 $change = $query->Execute();
+                $this->mAllowRelationDefinition = true;
+                $this->mRelations = array();
+                $this->Relations();
+                $this->mAllowRelationDefinition = false;
                 foreach ( $this->mRelations as $relation ) {
                     $relation->Rebuild();
                 }
@@ -303,6 +315,9 @@
             }
             else {
                 $this->ResolveDefaultValues();
+                if ( $this->OnBeforeCreate() === false ) {
+                    return;
+                }
                 $inserts = array();
                 foreach ( $this->mDbFields as $fieldname => $attributename ) {
                     $inserts[ $fieldname ] = $this->mCurrentValues[ $attributename ];
@@ -315,6 +330,10 @@
                     }
                 }
                 $this->mExists = true;
+                $this->mAllowRelationDefinition = true;
+                $this->mRelations = array();
+                $this->Relations();
+                $this->mAllowRelationDefinition = false;
                 foreach ( $this->mRelations as $relation ) {
                     $relation->Rebuild();
                 }
@@ -328,11 +347,27 @@
         protected function OnCreate() {
             // override me
         }
-        public function Delete() {
+        protected function OnDelete() {
+            // override me
+        }
+        protected function OnBeforeCreate() {
+            // override me
+        }
+        protected function OnBeforeUpdate() {
+            // override me
+        }
+        protected function OnBeforeDelete() {
+            // override me
+        }
+        public final function Delete() {
             if ( !$this->Exists() ) {
                 throw New SatoriException( 'Cannot delete non-existing Satori object' );
             }
             
+            if ( $this->OnBeforeDelete() === false ) {
+                return;
+            }
+
             $sql = 'DELETE FROM
                         :' . $this->mDbTableAlias . '
                     WHERE ';
@@ -351,7 +386,12 @@
             $query->BindTable( $this->mDbTableAlias );
             
             $this->mExists = false;
-            return $query->Execute();
+
+            $res = $query->Execute();
+
+            $this->OnDelete();
+
+            return $res;
         }
         protected function InitializeFields() {
             if ( !( $this->mDb instanceof Database ) ) {
@@ -535,20 +575,32 @@
                             :' . $this->mDbTableAlias . '
                         WHERE ';
                 $conditions = array();
-                foreach ( $this->PrimaryKeyFields as $primary ) {
-                    $conditions[] = '`' . $primary . '` = :' . $primary;
-                }
-                $sql .= implode( ' AND ', $conditions );
-                $sql .= ' LIMIT 1';
-                $query = $this->mDb->Prepare( $sql );
                 $i = 0;
+                $invalid = false;
                 foreach ( $this->PrimaryKeyFields as $primary ) {
-                    $query->Bind( $primary, $args[ $i ] );
+                    if ( $this->mAutoIncrementField == $primary ) {
+                        if ( $args[ $i ] == 0 ) { // autoincrement field is 0, object can't exist
+                            // (this situation can be created by manually inserting a row with autoincrement set to 0, but it's a rare case and a good optimization to care about)
+                            $invalid = true;
+                            break;
+                        }
+                    }
+                    $conditions[] = '`' . $primary . '` = :' . $primary;
                     ++$i;
                 }
-                $query->BindTable( $this->mDbTableAlias );
-                $res = $query->Execute();
-                if ( $res->NumRows() != 1 ) {
+                if ( !$invalid ) {
+                    $sql .= implode( ' AND ', $conditions );
+                    $sql .= ' LIMIT 1';
+                    $query = $this->mDb->Prepare( $sql );
+                    $i = 0;
+                    foreach ( $this->PrimaryKeyFields as $primary ) {
+                        $query->Bind( $primary, $args[ $i ] );
+                        ++$i;
+                    }
+                    $query->BindTable( $this->mDbTableAlias );
+                    $res = $query->Execute();
+                }
+                if ( $invalid || $res->NumRows() != 1 ) {
                     $this->mExists = false;
                     $fetched_array = array();
                 }
@@ -568,6 +620,7 @@
             }
             
             $this->mAllowRelationDefinition = true;
+            $this->mRelations = array();
             $this->Relations();
             $this->mAllowRelationDefinition = false;
             call_user_func_array( array( $this, 'AfterConstruct' ), $args );

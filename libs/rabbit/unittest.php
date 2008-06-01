@@ -71,6 +71,9 @@
                     New AssertResult( false, $message, true, false )
                 );
             }
+            return $this->InformTester(
+                New AssertResult( true, $message, $actual, false )
+            );
         }
         protected function RequireSuccess( AssertResult $result ) {
             if ( !$result->Success ) {
@@ -181,7 +184,7 @@
                     $goodtogo = true;
                 }
                 catch ( Exception $e ) {
-                    $runresults[] = New RunResultFailedByException( '[SetUp]', $e->getMessage() );
+                    $runresults[] = New RunResult( array( New AssertResultFailedByException( $e->getMessage() ) ), '[SetUp]' );
                     $goodtogo = false;
                 }
                 if ( $goodtogo ) {
@@ -192,13 +195,14 @@
                             $this->mAssertResults = array();
                             try {
                                 call_user_func( array( $testcase, $methodname ) ); // MAGIC
-                                $runresults[] = New RunResult( $this->mAssertResults, $methodname );
                             }
                             catch ( Exception $e ) {
-                                $runresults[] = New RunResultFailedByException( $methodname, $e->getMessage() );
+                                $this->Inform( New AssertResultFailedByException( $e->getMessage() ), $methodname );
+                                $runresults[] = New RunResult( $this->mAssertResults, $methodname );
                                 $water->ProfileEnd();
                                 break;
                             }
+                            $runresults[] = New RunResult( $this->mAssertResults, $methodname );
                             $water->ProfileEnd();
                         }
                     }
@@ -207,7 +211,7 @@
                     $testcase->TearDown();
                 }
                 catch ( Exception $e ) {
-                    $runresults[] = New RunResultFailedByException( '[TearDown]', $e->getMessage() );
+                    $runresults[] = New RunResult( array( New AssertResultFailedByException( $e->getMessage() ) ), '[TearDown]' );
                 }
                 $this->mTestResults[ $i ] = New TestcaseResult( $testcase, $runresults );
                 $water->ProfileEnd();
@@ -342,19 +346,6 @@
         }
     }
     
-    class RunResultFailedByException extends RunResult {
-        protected $mExceptionMessage;
-        
-        protected function GetMessage() {
-            return $this->mExceptionMessage;
-        }
-        public function RunResultFailedByException( $runname, $exceptionmessage ) {
-            $this->mRunName = $runname;
-            $this->mExceptionMessage = $exceptionmessage;
-            $this->mSuccess = false;
-        }
-    }
-
     class AssertResult extends Overloadable { // most basic test, a simple assertion
         protected $mSuccess;
         protected $mMessage;
@@ -373,11 +364,17 @@
         protected function GetExpected() {
             return $this->mExpected;
         }
-        public function AssertResult( $success, $message, $actual, $expected ) {
+        public function __construct( $success, $message, $actual, $expected ) {
             $this->mSuccess  = $success;
             $this->mMessage  = $message;
             $this->mActual   = $actual;
             $this->mExpected = $expected;
+        }
+    }
+
+    class AssertResultFailedByException extends AssertResult {
+        public function AssertResultFailedByException( $message ) {
+            parent::__construct( false, $message, '(exceptional failure)', '' );
         }
     }
 ?>

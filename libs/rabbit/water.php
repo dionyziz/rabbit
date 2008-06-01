@@ -36,6 +36,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 	
     class ExceptionFailedAssertion extends Exception {
     }
+    class ExceptionUndefinedVariable extends Exception {
+    }
     
 	final class Water {
 		private $mOutputAlerts;
@@ -172,6 +174,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
             $this->SetSetting( 'calltracelvl' , 1 );
         	$this->SetSetting( 'loglevel'     , 0 ); // traces and up
             $this->SetSetting( 'loglimit'     , 400 );
+            $this->SetSetting( 'jsonstartdepth', 3 );
             $this->SetSetting( 'strict'       , true );
             $this->SetSetting( 'sqlmaxlength' , 1000 );
 			$this->SetSetting( 'maxstring'    , 1200 );
@@ -188,7 +191,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 		}
 		private function AppendAlert( $errno, $errstr, $errdump, $backtrace = false ) {
 			$functions = $this->get_php_functions();
-			$dump = w_json_encode( $errdump , $this->mSettings[ 'maxstring' ] );
+			$dump = w_json_encode( $errdump , $this->mSettings[ 'maxstring' ], $this->mSettings[ 'jsonstartdepth' ] );
 			$alert = array(
 				'id' => $errno, 
 				'description' => $errstr, 
@@ -214,13 +217,13 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
             $i = 0;
 			while ( $call = array_shift( $lastword ) ) {
 				$phpfunction = isset( $functions[ $call[ 'function' ] ] ); // if this is a php built-in function.
-				if ( $call['file'] == '<water>' ) { // skip water functions
+				if ( $call[ 'file' ] == '<water>' ) { // skip water functions
 					continue;
 				}
 				if ( !isset( $call['class'] ) ) {
-					$call['class'] = '';
+					$call[ 'class' ] = '';
 				}
-				if ( isset( $call['args'] ) && is_array( $call['args'] ) ) {
+				if ( isset( $call[ 'args' ] ) && is_array( $call[ 'args' ] ) ) {
 					$args = $call[ 'args' ];
 				}
 				else {
@@ -346,13 +349,13 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 			// this is called at the end of processing
 			
 			ksort( $this->mOutputProfiles );
-			
+
 			$json = w_json_encode( array(
 					'alerts' => $this->mOutputAlerts,
 					'profiles' => $this->mOutputProfiles,
 					'sql' => $this->mOutputSQL
 				 )
-				, $this->mSettings[ 'maxstring' ]
+				, $this->mSettings[ 'maxstring' ], $this->Settings[ 'jsonstartdepth' ]
 			);
 			
 			// for allowing stand-alone debugging, we can process the page and only send back the debug JSON
@@ -464,6 +467,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 			if ( !$this->mDebugEnabled ) {
 				return;
 			}
+            $this->HandleSpecialError( $errno, $errstr );
 			switch ( $errno ) {
 				case E_ERROR:
 				case E_USER_ERROR:
@@ -495,6 +499,21 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 			}
 			$this->AppendAlert( $errno, $errstr, $errdump, $backtrace );
 		}
+        public function HandleSpecialError( $errno, $errstr ) {
+            static $exceptionalerrors = array(
+                E_NOTICE => array( '#Undefined variable\:#' => 'ExceptionUndefinedVariable' )
+            );
+
+            if ( !isset( $exceptionalerrors[ $errno ] ) ) {
+                return;
+            }
+
+            foreach ( $exceptionalerrors[ $errno ] as $regexp => $exception ) {
+                if ( preg_match( $regexp, $errstr ) ) {
+                    throw New $exception( $errstr );
+                }
+            }
+        }
 		public function HandleException( $exception, $data = false ) {
 			// since there has been no try/catch pair, this is a fatal exception
 			$this->FatalError( $exception->getMessage(), $data, $exception->getTrace() );

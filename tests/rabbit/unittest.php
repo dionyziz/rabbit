@@ -157,7 +157,22 @@
                         $this->Assert( is_object( $result ), 'Each item of a case\'s results must be an object (0)' );
                         $this->Assert( $result instanceof RunResult, 'Each item of a case\'s results must be an instance of RunResult (0)' );
                         $this->AssertEquals( true, $result->Success, 'This test was successful; it should be reported as such' );
-                        $this->AssertEquals( 3, $result->NumAssertions, 'The number of assertions for this test seem incorrect (0)' );
+                        $this->AssertEquals( 3, $result->NumAssertions, 'The number of assertions for this test seem incorrect (0) - ' . $result->RunName );
+                        $j = 0;
+                        foreach ( $result as $assertion ) {
+                            switch ( $j ) {
+                                case 0:
+                                    $this->AssertEquals( 'True is true', $assertion->Message, 'Message of assertion #0 of test method #0 of testcase is inaccurate' );
+                                    break; 
+                                case 1:
+                                    $this->AssertEquals( '1 = 1', $assertion->Message, 'Message of assertion #1 of test method #0 of testcase is inaccurate' );
+                                    break;
+                                case 2:
+                                    $this->AssertEquals( 'False is false', $assertion->Message, 'Message of assertion #2 of test method #0 of testcase is inaccurate' );
+                                    break;
+                            }
+                            ++$j;
+                        }
                         $this->AssertEquals( $result->NumAssertions, $result->NumSuccessfulAssertions, 'All assertions of this run were successful' );
                         $this->AssertEquals( 'TestSuccessful', $result->RunName, 'Runname of an item of Tester\'s results is invalid (0)' );
                         break;
@@ -172,9 +187,20 @@
                     case 2:
                         $this->Assert( is_object( $result ), 'Each item of a case\'s results must be an object (2)' );
                         $this->Assert( $result instanceof RunResult, 'Each item of a case\'s results must be an instance of RunResult (2)' );
-                        $this->Assert( $result instanceof RunResultFailedByException, 'This item of a a case\'s results must be an instance of FailedRunResult' );
                         $this->AssertEquals( false, $result->Success, 'This test was unanticipately unsuccessful; it should be reported as such' );
                         $this->AssertEquals( 'TestDoomedToFailure', $result->RunName, 'Runname of an item of Tester\'s results is invalid (2)' );
+                        $this->AssertEquals( 2, $result->NumAssertions, 'An exception failure must count like an assertion failure; incorrect number of assertions reported by tester' );
+                        $j = 0;
+                        foreach ( $result as $assertion ) {
+                            switch ( $j ) {
+                                case 0:
+                                    $this->AssertEquals( 'True is true', $assertion->Message, 'Successful assertions must remain stored when an exception fails' );
+                                    break;
+                                case 1:
+                                    $this->Assert( $assertion instanceof AssertResultFailedByException, 'Failed exceptions should log an AssertResultFailedByException class instance' );
+                            }
+                            ++$j;
+                        }
                         break;
                 }
                 ++$i;

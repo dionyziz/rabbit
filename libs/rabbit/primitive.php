@@ -38,6 +38,9 @@
     if ( !isset( $rabbit_settings[ 'timezone' ] ) ) {
         $rabbit_settings[ 'timezone' ] = 'GMT';
     }
+    if ( isset( $rabbit_settings[ 'locale' ] ) ) {
+        setlocale( LC_ALL, $rabbit_settings[ 'locale' ] );
+    }
 
     // enable the debugging library if we're not on a production environment
 	if ( !$rabbit_settings[ 'production' ] ) {
@@ -97,7 +100,10 @@
     $libs->Load( 'rabbit/typesafety' );
     $libs->Load( 'rabbit/activerecord/satori' );
 	$libs->Load( 'rabbit/db/db' );
-    
+    if ( isset( $rabbit_settings[ 'memcache' ] ) ) {
+        $libs->Load( 'rabbit/memcache/mc' );
+    }
+
     // set up databases
     if (    isset(    $rabbit_settings[ 'databases' ] ) 
          && is_array( $rabbit_settings[ 'databases' ] ) 

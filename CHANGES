@@ -24,6 +24,7 @@
 
 === Water ===
 * Undefined constsants now throw exceptions.
+* Added water static images and icons to repository.
 
 === Other ===
 * Added "hostnameforce" setting to allow controlling whether a hostname should be forced or not.

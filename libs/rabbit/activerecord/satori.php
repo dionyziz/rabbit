@@ -17,6 +17,7 @@
         
         public abstract function __construct();
         protected abstract function MakeObj();
+        protected abstract function Equals( Relation $target );
         protected abstract function Modified();
         public function Rebuild() {
             if ( ( !is_object( $this->mRetrieved ) && $this->mRetrieved == 0 ) ) {
@@ -42,6 +43,14 @@
         protected $mTargetModelClass;
         protected $mCurrentArgs;
         
+        public function IsSameAs( $targetModelClass, $foreignKey) {
+            return 
+                   $this->mTargetModelClass == $targetModelClass 
+                && $this->mForeignKey == $foreignKey;
+        }
+        public function Equals( Relation $target ) {
+            return $target->IsSameAs( $this->mTargetModelClass, $this->mForeignKey ); 
+        }
         public function __construct( $queryModel, $targetModelClass, $foreignKey ) {
             if ( !is_array( $foreignKey ) ) {
                 $foreignKey = array( $foreignKey );
@@ -70,20 +79,38 @@
             return $args;
         }
         protected function Modified() {
-            if ( ( $args = $this->RetrieveCurrentArgs() ) != $this->mCurrentArgs ) {
-                $this->mCurrentArgs = $args;
-                return true;
+            // check if $args (current arguments) and $this->mCurrentArgs (stored old arguments) are one and the same
+            $args = $this->RetrieveCurrentArgs();
+            w_assert( count( $args ) == count( $this->mCurrentArgs ) );
+            $i = 0;
+            $change = false; // assume nothing changed, we might disprove this later
+            $modified = false; // assume no serious modification took place
+            foreach ( $args as $arg ) {
+                if ( $arg != $this->mCurrentArgs[ $i ] ) {
+                    // something changed...
+                    $change = true;
+                    // check if change is significant
+                    if ( $this->mQueryModel->IsSignificantAttribute( $this->mForeignKey[ $i ] ) ) {
+                        // some modification took place that we need to take into account
+                        $modified = true;
+                    }
+                }
+                ++$i;
             }
-            return false;
+
+            if ( $change ) { // if something changed, update current args
+                $this->mCurrentArgs = $args;
+                if ( !$modified ) { // no significant change, but we still need to update our primary key value changes
+                    $this->mRetrieved->DefinePrimaryKeyAttributes( $args );
+                }
+            }
+
+            return $modified;
         }
         protected function MakeObj() {
-			global $water; 
-
             // instantiate $className with a variable number of arguments (the number of columns in the primary key can vary)
             $class = New ReflectionClass( $this->mTargetModelClass );
 			$args = $this->Args();
-            
-            $water->Trace( 'Building HasOne relation object of class `' .$this->mTargetModelClass . '\' for query model `' . get_class( $this->mQueryModel ) . '\'', $args );
             
             // create object instance to referenced object
 			$target = $class->newInstanceArgs( $args );
@@ -102,6 +129,25 @@
         protected $mFinderMethod;
         protected $mForeignKey;
 
+        public function IsSameAs( $finderClass, $finderMethod, $foreignKey ) {
+            $equals = $finderClass == $this->mFinderClass && $finderMethod == $this->mFinderMethod;
+            if ( !$equals ) {
+                return false;
+            }
+            if ( is_string( $foreignKey ) ) {
+                if ( is_string( $this->mForeignKey ) ) {
+                    return $foreignKey == $this->mForeignKey; // both are strings
+                }
+                return false; // remote is string, local is object
+            }
+            if ( is_string( $this->mForeignKey ) ) {
+                return false; // local is string, remote is object
+            }
+            return true; // both are objects, assume equality and don't bother checking (too slow)
+        }
+        public function Equals( Relation $target ) {
+            return $target->IsSameAs( $this->mFinderClass, $this->mFinderMethod, $this->mForeignKey );
+        }
         public function __construct( $queryModel, $finderClass, $finderMethod, $foreignKey ) {
             if ( !class_exists( $finderClass ) ) {
                 throw New SatoriException( 'Finder class `' . $finderClass . '\' used in HasMany relation of `' . $this->mQueryModel . '\' specified for HasMany relation does not exist' );
@@ -154,11 +200,22 @@
         protected $mAutoIncrementField; // string name of the database field that is autoincrement, or false if there is no autoincrement field
         protected $mDefaultValues; // dictionary with attribute name (string) => default value, to be used if value of empty object remains at 'false'
         protected $mRelations;
+        private $mOldRelations; // temporary holder of old relations while they are being redefined
         protected $mReadOnlyModified; // boolean; whether there has been an attempt to modify a read-only attribute (allowed providing the object is non-persistent and never made persistent)
         private $mAllowRelationDefinition;
         
         protected function Relations() {
             // override me
+        }
+        public function IsSignificantAttribute( $attribute ) {
+            // does a change in the field named $fieldname that a relation relies upon require a relation rebuild?
+            // not if the value is generated within this very instance in a way that the related classes cannot access directly,
+            // such as an autoincrement value
+
+            if ( $this->mAutoIncrementField == $this->mAttribute2DbField[ $attribute ] ) {
+                return false;
+            }
+            return true;
         }
         public function GetAttribute2DbField() {
             return $this->mAttribute2DbField;
@@ -189,10 +246,17 @@
                 return;
             }
             if ( $this->mAllowRelationDefinition && $value instanceof Relation ) {
+                if ( isset( $this->mOldRelations[ $name ] ) ) {
+                    if ( $this->mOldRelations[ $name ]->Equals( $value ) ) {
+                        $this->mRelations[ $name ] = $this->mOldRelations[ $name ];
+                        return; // no need to update it
+                    }
+                }
                 $this->mRelations[ $name ] = $value;
                 return;
             }
 
+            $name = ucfirst( $name );
             if ( !in_array( $name, $this->mDbFields ) ) {
                 throw New SatoriException( 'Attempting to write non-existing Satori property `' . $name . '\' on a `' . get_class( $this ) . '\' instance' );
             }
@@ -206,7 +270,7 @@
                 }
             }
             
-            $this->mCurrentValues[ ucfirst( $name ) ] = $value;
+            $this->mCurrentValues[ $name ] = $value;
         }
         public function __get( $name ) {
             if ( !is_null( $got = parent::__get( $name ) ) ) {
@@ -217,10 +281,11 @@
                 return $this->mRelations[ $name ]->Retrieve();
             }
             
+            $name = ucfirst( $name );
             if ( !in_array( $name, $this->mDbFields ) ) {
                 throw New SatoriException( 'Attempting to read non-existing Satori property `' . $name . '\' on a `' . get_class( $this ) . '\' instance' );
             }
-            return $this->mCurrentValues[ ucfirst( $name ) ];
+            return $this->mCurrentValues[ $name ];
         }
         public function __isset( $name ) {
             return in_array( $name, $this->mDbFields );
@@ -257,7 +322,16 @@
         protected function GetPrimaryKeyFields() {
             return $this->mPrimaryKeyFields;
         }
-        public function Save() {
+        protected function DefineRelations() {
+            $this->mOldRelations = $this->mRelations;
+            $this->mRelations = array();
+
+            $this->mAllowRelationDefinition = true;
+            $this->mRelations = array();
+            $this->Relations();
+            $this->mAllowRelationDefinition = false;
+        }
+        final public function Save() {
             if ( $this->mReadOnlyModified ) {
                 throw New SatoriException( 'This object has modified read-only attributes; it cannot be made persistent' );
             }
@@ -272,16 +346,20 @@
                 $updates = array();
                 $bindings = array();
                 $updatedAttributes = array();
+                $previousValues = array();
                 foreach ( $this->mDbFields as $fieldname => $attributename ) {
                     $attributevalue = $this->mCurrentValues[ $attributename ];
                     if ( $this->mPreviousValues[ $attributename ] != $attributevalue ) {
                         $updates[] = "`$fieldname` = :$fieldname";
                         $bindings[ $fieldname ] = $attributevalue;
                         $updatedAttributes[ $attributename ] = true;
+                        $previousValues[ $attributename ] = $this->mPreviousValues[ $attributename ];
                         $this->mPreviousValues[ $attributename ] = $attributevalue;
                     }
                 }
                 if ( !count( $updates ) ) {
+                    $this->OnUpdate( array() );
+
                     // nothing to update
                     return true;
                 }
@@ -303,14 +381,11 @@
                     $query->Bind( $name, $value );
                 }
                 $change = $query->Execute();
-                $this->mAllowRelationDefinition = true;
-                $this->mRelations = array();
-                $this->Relations();
-                $this->mAllowRelationDefinition = false;
+                $this->DefineRelations();
                 foreach ( $this->mRelations as $relation ) {
                     $relation->Rebuild();
                 }
-                $this->OnUpdate( $updatedAttributes );
+                $this->OnUpdate( $updatedAttributes, $previousValues );
                 return $change;
             }
             else {
@@ -330,11 +405,8 @@
                     }
                 }
                 $this->mExists = true;
-                $this->mAllowRelationDefinition = true;
-                $this->mRelations = array();
-                $this->Relations();
-                $this->mAllowRelationDefinition = false;
-                foreach ( $this->mRelations as $relation ) {
+                $this->DefineRelations();
+                foreach ( $this->mRelations as $attribute => $relation ) {
                     $relation->Rebuild();
                 }
                 $this->OnCreate();
@@ -359,7 +431,7 @@
         protected function OnBeforeDelete() {
             // override me
         }
-        public final function Delete() {
+        final public function Delete() {
             if ( !$this->Exists() ) {
                 throw New SatoriException( 'Cannot delete non-existing Satori object' );
             }
@@ -498,14 +570,10 @@
         protected function LoadDefaults() {
             // overload me
         }
-        protected function AfterConstruct( /* [ $arg1 [, $arg2, [, ... ] ] ] */ ) {
+        protected function OnConstruct( /* [ $arg1 [, $arg2, [, ... ] ] ] */ ) {
             // overload me
         }
         final public function DefinePrimaryKeyAttributes( $values ) {
-            global $water;
-            
-            $water->Trace('Copying primary key attributes to empty object of class `' . get_class( $this ) . '\'', $values);
-            
             if ( count( $values ) != count( $this->mPrimaryKeyFields ) ) {
                 throw New SatoriException( 'DefinePrimaryKeyAttributes called with an incorrect number of arguments' );
             }
@@ -518,8 +586,6 @@
                 $this->mCurrentValues[ $this->mDbFields[ $primary ] ] = current( $values );
                 next( $values );
             }
-
-            $water->Trace( 'Primary key attributes values copied to empty object of class `' . get_class( $this ) . '\'', $this->mCurrentValues );
         }
         final public function __construct( /* [ $arg1 [, $arg2 [, ... ] ] ] */ ) {
             // do not overload me!
@@ -619,11 +685,8 @@
                 }
             }
             
-            $this->mAllowRelationDefinition = true;
-            $this->mRelations = array();
-            $this->Relations();
-            $this->mAllowRelationDefinition = false;
-            call_user_func_array( array( $this, 'AfterConstruct' ), $args );
+            $this->DefineRelations();
+            call_user_func_array( array( $this, 'OnConstruct' ), $args );
         }
         public function __toString() {
             if ( $this->Exists() ) {

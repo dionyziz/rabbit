@@ -1,3 +1,33 @@
+== 0.7.10000 ==
+=== Database ===
+* Added support for numeric MySQL datatypes: DECIMAL, DEC, DOUBLE, TINYINT, BOOL, BOOLEAN, SMALLINT, MEDIUMINT, INTEGER, BIGINT, LONGINT.
+* Added support for MySQL datatypes: SET, BINARY, VARBINARY, TINYBLOB, TINYTEXT, BLOB, MEDIUMBLOB, MEDIUMTEXT, LONGBLOB.
+* Bugfix: Default database driver was undefined; now it's MySQL.
+
+=== Active record ===
+* Optimization: Generated local autoincrement columns are not looked up in remote objects as part of relations.
+* Added new argument to OnUpdate() event to allow for reading old domain-level attribute values.
+* Renamed event AfterConstruct() to OnConstruct() for naming consistency.
+* Satori Save function is no longer overridable -- use the relevant events for halding creations and updates.
+* Bugfix: OnUpdate() trigger is now called when an update takes place, even when no domain-level attributes have been modified.
+* Bugfix: Relations conditionally defined in Satori Relations function are now unset properly.
+
+=== Helpers ===
+* Added string function wrappers utf8_strtolower(), utf8_strtoupper(), and utf8_ucfirst().
+* Removed obsolete string functions mystrtolower(), mystrtoupper(), myucfirst().
+
+=== Coala ===
+* Added BaseURL support for AJAX requests on different subdomains or https.
+
+=== Unit testing ===
+* Added calltraces to exceptionally failed assertions.
+
+=== Water ===
+* Undefined constsants now throw exceptions.
+
+=== Other ===
+* Added "hostnameforce" setting to allow controlling whether a hostname should be forced or not.
+
 == 0.7.8974 ==
 === Unit testing ===
 * Exceptional errors in test cases now do not surpass previous success or error messages in the same test run.

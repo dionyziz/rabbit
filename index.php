@@ -18,7 +18,7 @@
     Rabbit_Construct( 'HTML' );
 
     $req = $_GET;
-    
+
     Rabbit_ClearPostGet();
     
     $page->AttachMainElement( 'main' , $req );

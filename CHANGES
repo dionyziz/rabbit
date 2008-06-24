@@ -11,6 +11,7 @@
 * Database failures are now reported clearly as exceptions.
 
 === Active record ===
+* Optimization: Added ability to prefetch relation objects for HadOne relations.
 * Bugfix: OnUpdate() is called with correct argument for previous values when no modifications occurred.
 * Bugfix: Updating existing objects with multifield primary keys is now possible.
 * Bugfix: It's now possible to modify the primary key of an object itself.
@@ -35,7 +36,7 @@
 * Bugfix: Numeric strings are no longer normalized as integers; instead, they are passed literally.
 
 === JSON ===
-* Lists are now encoded properly as lists and not as dictionaries.
+* Bugfix: Lists are now encoded properly as lists and not as dictionaries.
 
 == 0.7.10000 ==
 === Database ===

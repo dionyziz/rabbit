@@ -14,6 +14,7 @@
     Rabbit_ClearPostGet();
     
     $units = $coala->ParseRequest( $warmable, $req );
+
     foreach ( $units as $unit ) {
         $page->AttachMainElement( $unit[ 'type' ], $unit[ 'id' ], $unit[ 'req' ] );
     }

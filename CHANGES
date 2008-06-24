@@ -1,3 +1,42 @@
+== 0.7.11000 ==
+=== Type safety ===
+* Security: Added tText type-safe type to validate properly encoded UTF-8 strings.
+* Added ability to check for type-safety argument existance of any argument passed, independant of its output value.
+* Converted constructors to PHP5 __construct().
+
+=== Unit testing ===
+* Bugfix: Libraries referred-to by mAppliesTo are now loaded automatically.
+
+=== Database ===
+* Database failures are now reported clearly as exceptions.
+
+=== Active record ===
+* Bugfix: OnUpdate() is called with correct argument for previous values when no modifications occurred.
+* Bugfix: Updating existing objects with multifield primary keys is now possible.
+* Bugfix: It's now possible to modify the primary key of an object itself.
+* Bugfix: It's now possible to delete objects with a modified primary key value, referring to the initial object.
+
+=== Element handling ===
+* Added more meaningful error messages for invalid function names.
+
+=== Action handling ===
+* Security: Cross-side-scripting could allow user impersonation to execute certain actions via POST.
+* Added exceptional error for non-functional action outputting.
+* Added exceptional error for actions that do not return a valid redirection.
+
+=== Helpers ===
+* Multi-byte functions now default to UTF-8 encoding by default.
+* Added e-mail validation helper.
+* Validation helpers now return clear booleans.
+* Removed deprecated utf8_* functions; use the multibyte extension instead.
+* Removed deprecated function myescape().
+
+=== Coala ===
+* Bugfix: Numeric strings are no longer normalized as integers; instead, they are passed literally.
+
+=== JSON ===
+* Lists are now encoded properly as lists and not as dictionaries.
+
 == 0.7.10000 ==
 === Database ===
 * Added support for numeric MySQL datatypes: DECIMAL, DEC, DOUBLE, TINYINT, BOOL, BOOLEAN, SMALLINT, MEDIUMINT, INTEGER, BIGINT, LONGINT.

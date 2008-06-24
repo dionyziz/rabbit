@@ -34,11 +34,16 @@
 		}
 		if ( is_array( $what ) ) {
 			// check if it is non-assosiative
-			if ( array_keys( $what ) == range( 0, count( $what ) ) ) {
-				for ( $i = 0 ; $i < count( $what ) ; ++$i ) {
-					$what[ $i ] = w_json_encode( $what, $chopstrings, $depth + 1, $ascii );
-				}
-				return '[' . implode(',', $what) . ']';
+			if ( array_keys( $what ) == range( 0, count( $what ) - 1 ) ) {
+                $ret = '[';
+                for ( $i = 0; $i < count( $what ); ++$i ) {
+                    $ret .= w_json_encode( $what[ $i ], $chopstrings, $depth + 1, $ascii );
+                    if ( $i + 1 < count( $what ) ) {
+                        $ret .= ',';
+                    }
+                }
+                $ret .= ']';
+                return $ret;
 			}
 			$ret = '{';
 			reset( $what );

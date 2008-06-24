@@ -1,8 +1,13 @@
 <?php
     abstract class tBaseType {
         protected $mValue;
+        protected $mExists;
         
-        public function tBaseType( $value ) {
+        public function __construct( $value ) {
+            $this->mExists = $value !== false;
+        }
+        public function Exists() {
+            return $this->mExists;
         }
         public function Get() {
             return $this->mValue;
@@ -13,21 +18,21 @@
     }
     
     class tInteger extends tBaseType {
-        public function tInteger( $value ) {
+        public function __construct( $value ) {
             $this->mValue = ( integer )$value;
-            $this->tBaseType( $value );
+            parent::__construct( $value );
         }
     }
     
     class tFloat extends tBaseType {
-        public function tFloat( $value ) {
+        public function __construct( $value ) {
             $this->mValue = ( float )$value;
-            $this->tBaseType( $value );
+            parent::__construct( $value );
         }
     }
     
     class tBoolean extends tBaseType {
-        public function tBoolean( $value ) {
+        public function __construct( $value ) {
             if ( $value === 'yes' || $value === 'true' || $value === '1' || $value === 1 ) {
                 $this->mValue = true;
             }
@@ -37,21 +42,28 @@
             else {
                 $this->mValue = ( bool )$value;
             }
-            $this->tBaseType( $value );
+            parent::__construct( $value );
         }
     }
     
     class tString extends tBaseType {
-        public function tString( $value ) {
+        public function __construct( $value ) {
             $this->mValue = ( string )$value;
-            $this->tBaseType( $value );
+            parent::__construct( $value );
         }
     }
     
+    class tText extends tString {
+        public function __construct( $value ) {
+            parent::__construct( $value );
+            $this->mValue = iconv( 'UTF-8', 'UTF-8', $this->mValue ); // ensure UTF-8 is well-formed; if not, filter out illegal characters
+        }
+    }
+
     abstract class tArray extends tBaseType implements Iterator {
         protected $mValues;
         
-        public function tArray( $values, $basetype ) {
+        public function __construct( $values, $basetype ) {
             w_assert( is_string( $basetype ), '$basetype, second parameter to tArray constructor from your custom type, must be a string' );
             w_assert( class_exists( $basetype ), '$basetype, second parameter to tArray constructor from your custom type, cannot be the empty string' );
             
@@ -92,39 +104,40 @@
     }
     
     class tIntegerArray extends tArray {
-        public function tIntegerArray( $values ) {
-            $this->tArray( $values, 'tInteger' );
+        public function __construct( $values ) {
+            parent::__construct( $values, 'tInteger' );
         }
     }
 
     class tFloatArray extends tArray {
-        public function tFloatArray( $values ) {
-            $this->tArray( $values, 'tFloat' );
+        public function __construct( $values ) {
+            parent::__construct( $values, 'tFloat' );
         }
     }
     
     class tBooleanArray extends tArray {
-        public function tBooleanArray( $values ) {
-            $this->tArray( $values, 'tBoolean' );
+        public function __construct( $values ) {
+            parent::__construct( $values, 'tBoolean' );
         }
     }
 
     class tStringArray extends tArray {
-        public function tStringArray( $values ) {
-            $this->tArray( $values, 'tString' );
+        public function __construct( $values ) {
+            parent::__construct( $values, 'tString' );
+        }
+    }
+
+    class tTextArray extends tArray {
+        public function __construct( $values ) {
+           parent::__construct( $values, 'tText' );
         }
     }
 
     class tCoalaPointer extends tString {
-        private $mExists;
-        
-        public function tCoalaPointer( $value ) {
-            $this->tString( $value );
+        public function __construct( $value ) {
+            parent::__construct( $value );
             $this->mExists = $value != '0';
             w_assert( preg_match( '#^([a-zA-Z0-9\.\[\] ])+$#', $this->mValue ) );
-        }
-        public function Exists() {
-            return $this->mExists;
         }
         public function Get() {
             throw New Exception( 'Type Get() cannot be used on tCoalaPointer; use "echo" directly with your pointer instead' );
@@ -140,11 +153,7 @@
         private $mSize;
         private $mTempname;
         private $mErrorcode;
-        private $mExists;
-        
-        public function Exists() {
-            return $this->mExists;
-        }
+
         public function __get( $name ) {
             switch ( $name ) {
                 case 'Name':
@@ -160,7 +169,7 @@
             }
             // else return nothing
         }
-        public function tFile( $value ) {
+        public function __construct( $value ) {
             $this->mExists = false;
             if ( !is_array( $value ) ) {
                 return;
@@ -222,6 +231,7 @@
                 }
             }
         }
+
         
         return call_user_func_array( $function , $params );
     }

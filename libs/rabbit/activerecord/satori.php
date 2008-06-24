@@ -122,6 +122,11 @@
             }
             return $target;
         }
+        public function CopyFrom( $obj ) {
+            w_assert( $obj instanceof $this->mTargetModelClass );
+
+            $this->mRetrieved = $obj;
+        }
     }
     
     class RelationHasMany extends Relation {
@@ -358,7 +363,7 @@
                     }
                 }
                 if ( !count( $updates ) ) {
-                    $this->OnUpdate( array() );
+                    $this->OnUpdate( array(), array() );
 
                     // nothing to update
                     return true;
@@ -367,15 +372,22 @@
                 $sql .= implode( ', ', $updates );
                 $sql .= ' WHERE ';
                 $conditions = array();
-                foreach ( $this->PrimaryKeyFields as $primarykey ) {
-                    $conditions[] = '`' . $primarykey . '` = :_' . $primarykey;
+                foreach ( $this->PrimaryKeyFields as $primarykeyfield ) {
+                    $conditions[] = '`' . $primarykeyfield . '` = :_' . $primarykeyfield;
                 }
                 $sql .= implode( ' AND ', $conditions );
                 $sql .= ' LIMIT 1;';
                 $query = $this->mDb->Prepare( $sql );
                 $query->BindTable( $this->mDbTableAlias );
                 foreach ( $this->mPrimaryKeyFields as $primarykeyfield ) {
-                    $query->Bind( '_' . $primarykey, $this->mCurrentValues[ $this->mDbFields[ $primarykeyfield ] ] );
+                    // search using the previous values of the primary key (if its value changed)
+                    if ( isset( $previousValues[ $this->mDbFields[ $primarykeyfield ] ] ) ) {
+                        $value = $previousValues[ $this->mDbFields[ $primarykeyfield ] ];
+                    }
+                    else {
+                        $value = $this->mCurrentValues[ $this->mDbFields[ $primarykeyfield ] ];
+                    }
+                    $query->Bind( '_' . $primarykeyfield, $value );
                 }
                 foreach ( $bindings as $name => $value ) {
                     $query->Bind( $name, $value );
@@ -452,7 +464,8 @@
             $query = $this->mDb->Prepare( $sql );
             $i = 0;
             foreach ( $this->PrimaryKeyFields as $primary ) {
-                $query->Bind( $primary, $this->mCurrentValues[ $this->mDbFields[ $primary ] ] );
+                // delete using the values of mPreviousValues in the primary key
+                $query->Bind( $primary, $this->mPreviousValues[ $this->mDbFields[ $primary ] ] );
                 ++$i;
             }
             $query->BindTable( $this->mDbTableAlias );

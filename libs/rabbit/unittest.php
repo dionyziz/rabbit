@@ -358,7 +358,7 @@
 				case 'Message':
 				case 'Success':
 				case 'Actual':
-				case 'Excpected':
+				case 'Expected':
 					$attribute = 'm' . $key;
 					return $this->$attribute;
 			}

@@ -1,3 +1,24 @@
+== 0.7.12000 ==
+=== Database ===
+* Optimization: Table indexes and fields are now cached using memcache if supported.
+
+=== Active record ===
+* Optimization: Removed class Overloadable due to speed problems. (abresas)
+
+=== Element handling ===
+* Elements are now classes and must use the Render() method; they are no longer functions.
+
+=== Helpers ===
+* Improved e-mail address validation.
+* Added e-mail helper to allow UTF-8 subjects.
+
+=== Page Handling ===
+* Added PagePlaintext for straight-forward plaintext support.
+
+=== Others ===
+* Optimization: Added deassertize script to remove assertions in a production environment. (indy)
+* Added ctags builder script.
+
 == 0.7.11000 ==
 === Type safety ===
 * Security: Added tText type-safe type to validate properly encoded UTF-8 strings.

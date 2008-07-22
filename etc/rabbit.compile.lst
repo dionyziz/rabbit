@@ -22,6 +22,8 @@
 /etc/database
 /etc/database/xml2sql.xsl
 /etc/legal.txt~
+/etc/deassertize.py
+/etc/build-tags.sh
 /js
 /js/coala.js
 /js/static.php

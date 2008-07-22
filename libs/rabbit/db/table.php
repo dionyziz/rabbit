@@ -1,5 +1,67 @@
 <?php
-	class DBTable extends Overloadable {
+    function DBTable_GetInfo( DBTable $table, $type = 'indexes' ) {
+        global $mc;
+        global $water;
+        static $cache = false;
+
+        $key = 'dbcache';
+        w_assert( $table instanceof DBTable );
+        $tablename = $table->Name;
+        $tablealias = $table->Alias;
+        $database = $table->Database;
+        w_assert( $database instanceof Database );
+        $databasealias = $database->Alias();
+        if ( $cache === false ) {
+            $cache = $mc->get( $key );
+        }
+        switch ( $type ) {
+            case 'indexes':
+                if ( !isset( $cache[ $databasealias ][ $tablename ][ 'indexes' ] ) ) {
+                    $query = $database->Prepare(
+                        'SHOW INDEX FROM :' . $tablealias . ';'
+                    );
+                    $query->BindTable( $tablealias );
+                    $res = $query->Execute();
+                    $indexinfos = array();
+                    while ( $row = $res->FetchArray() ) {
+                        if ( !isset( $indexinfos[ $row[ 'Key_name' ] ] ) ) {
+                            $indexinfos[ $row[ 'Key_name' ] ] = array();
+                        }
+                        $indexinfos[ $row[ 'Key_name' ] ][] = $row;
+                    }
+                    $cache[ $databasealias ][ $tablename ][ 'indexes' ] = $indexinfos;
+                    $mc->set( $key, $cache );
+                }
+                $indexinfos = $cache[ $databasealias ][ $tablename ][ 'indexes' ];
+                $indexes = array();
+                foreach ( $indexinfos as $indexinfo ) {
+                    $indexes[] = New DBIndex( $table, $indexinfo );
+                }
+                return $indexes;
+            case 'fields':
+                if ( !isset( $cache[ $databasealias ][ $tablename ][ 'fields' ] ) ) {
+                    $query = $database->Prepare(
+                        'SHOW FIELDS FROM :' . $tablealias . ';'
+                    );
+                    $query->BindTable( $tablealias );
+                    $res = $query->Execute();
+                    $fieldinfos = array();
+                    while ( $row = $res->FetchArray() ) {
+                        $fieldinfos[] = $row;
+                    }
+                    $cache[ $databasealias ][ $tablename ][ 'fields' ] = $fieldinfos;
+                    $mc->set( $key, $cache );
+                }
+                $fieldinfos = $cache[ $databasealias ][ $tablename ][ 'fields' ];
+                $fields = array();
+                foreach ( $fieldinfos as $fieldinfo ) {
+                    $fields[ $fieldinfo[ 'Field' ] ] = New DBField( $table, $fieldinfo );
+                }
+                return $fields; 
+        }
+    }
+
+	class DBTable {
 		protected $mDb;
 		protected $mTableName;
 		protected $mAlias;
@@ -107,69 +169,46 @@
             }
             return true;
         }
-        protected function GetName() {
-            return $this->mTableName;
-        }
-        protected function GetAlias() {
-            return $this->mAlias;
-        }
         public function FieldByName( $name ) {
+            $this->Fields;
             if ( !isset( $this->mFields[ $name ] ) ) {
                 return false;
             }
             return $this->mFields[ $name ];
         }
-        protected function GetFields() {
-            if ( $this->mFields === false ) {
-                $query = $this->mDb->Prepare( 
-                    'SHOW FIELDS FROM :' . $this->mAlias . ';'
-                );
-                $query->BindTable( $this->mAlias );
-                $res = $query->Execute();
-                $this->mFields = array();
-                while ( $row = $res->FetchArray() ) {
-                    $this->mFields[ $row[ 'Field' ] ] = New DBField( $this, $row );
-                }
-            }
-            return $this->mFields;
-        }
-        protected function GetIndexes() {
-            if ( $this->mIndexes === false ) {
-                $query = $this->mDb->Prepare(
-                    'SHOW INDEX FROM :' . $this->mAlias . ';'
-                );
-                $query->BindTable( $this->mAlias );
-                $res = $query->Execute();
-                $this->mIndexes = array();
-                $indexinfos = array();
-                while ( $row = $res->FetchArray() ) {
-                    if ( !isset( $indexinfos[ $row[ 'Key_name' ] ] ) ) {
-                        $indexinfos[ $row[ 'Key_name' ] ] = array();
-                    }
-                    $indexinfos[ $row[ 'Key_name' ] ][] = $row;
-                }
-                foreach ( $indexinfos as $indexinfo ) {
-                    $this->mIndexes[] = New DBIndex( $this, $indexinfo );
-                }
-            }
-            return $this->mIndexes;
-        }
-        protected function SetName( $value ) {
-            w_assert( is_string( $value ), "Table name should be a string" );
-
-            $this->mTableName = $value;
-        }
-        protected function SetAlias( $value ) {
-            $this->mAlias = $value;
-        }
-        protected function SetDatabase( Database $db ) {
-            w_assert( is_object( $db ) );
-            w_assert( $db instanceof Database );
-            $this->mDb = $db;
-        }
-        protected function GetDatabase() {
-            return $this->mDb;
-        }
+		public function __get( $key ) {
+			switch ( $key ) {
+				case 'Name':
+					return $this->mTableName;
+				case 'Alias':
+					return $this->mAlias;
+				case 'Fields':
+				case 'Indexes':
+					$attribute = 'm' . $key;
+					if ( $this->$attribute === false ) {
+						$this->$attribute = DbTable_GetInfo( $this, strtolower( $key ) );
+					}
+					return $this->$attribute;
+				case 'Database':
+					return $this->mDb;
+			}
+		}
+		public function __set( $key, $value ) {
+			switch ( $key ) {
+				case 'Name':
+					w_assert( is_string( $value ), "Table name should be a string" );
+					$this->mTableName = $value;
+					break;
+				case 'Alias':
+					$this->mAlias = $value;
+					break;
+				case 'Database':
+					w_assert( is_object( $value ) );
+					w_assert( $value instanceof Database );
+					$this->mDb = $value;
+					break;
+			}
+		}
 		public function __construct( $db = false, $tablename = false, $alias = '' ) {
             $this->mExists = false;
             
@@ -218,7 +257,7 @@
             w_assert( count( $fields ) );
             foreach ( $fields as $field ) {
                 w_assert( $field instanceof DBField );
-                $this->mFields[] = $field;
+                $this->mFields[ $field->Name ] = $field;
             }
         }
         public function CreateIndex( /* $indexe1, $index2, ... */ ) {

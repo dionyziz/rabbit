@@ -1,4 +1,9 @@
 <?php
+    abstract class Element {
+        public final function __construct() {
+        }
+    }
+
 	final class Elemental {
 		private $mLastElement;
 		private $mIncluded;
@@ -31,44 +36,40 @@
 			$this->mLastElement = $elementpath;
 			if ( !isset( $this->mIncluded[ $elementpath ] ) ) {
                 ob_start();
-                $ret = Rabbit_Include( 'elements/' . $elementpath );
+                $ret = Rabbit_Include( 'elements/' . $elementpath ); // throws RabbitIncludeException
                 $out = ob_get_clean();
                 
                 if ( strlen( $out ) ) {
-                    $this->mWater->Warning( 'Non-functional element output: ' . $elementpath );
+                    throw New Exception( 'Non-functional element output: ' . $elementpath );
                 }
                 
                 $this->mIncluded[ $elementpath ] = true;
 			}
 			if ( !$this->mIncluded[ $elementpath ] ) {
-    	        $this->mWater->Notice( 'Element doesn\'t exist: ' . $elementpath );
-				return false;
+    	        throw New Exception( 'Element doesn\'t exist: ' . $elementpath );
 			}
             return true;
         }
-        public function GetFunction( $elementpath ) {
-            if ( !$this->IncludeFile( $elementpath ) ) {
-                return false;
+        public function GetClass( $elementpath ) {
+            $this->IncludeFile( $elementpath );
+			$classname = 'Element' . str_replace( '/' , '' , $elementpath );
+			if ( class_exists( $classname ) ) {
+                return $classname;
             }
-			$functionname = 'Element' . str_replace( '/' , '' , $elementpath );
-			if ( function_exists( $functionname ) ) {
-                return $functionname;
-            }
-            $functions = get_defined_functions();
-            $functions = $functions[ 'user' ];
-            $this->mWater->Warning( 'Element is not functional: ' . $elementpath . '; expected function "' . $functionname . '" (last defined: "' . $functions[ count( $functions ) - 1 ] . '")' );
-            return false;
+            $classes = get_declared_classes();
+            throw New Exception( 'Element class not defined for element ' . $elementpath . '; expected class "' . $classname . '" (last defined: "' . $classes[ count( $classes ) - 1 ] . '")' );
         }
         public function Element( /* $elementpath , $arg1 , $arg2 , $arg3 , ... , $argN */ ) {
 	        w_assert( func_num_args() );
 	        $args = func_get_args();
 	        $elementpath = array_shift( $args );
-			$functionname = $this->GetFunction( $elementpath );
-            if ( $functionname === false ) {
+			$classname = $this->GetClass( $elementpath );
+            if ( $classname === false ) {
                 return false;
             }
             $this->mWater->Profile( 'Render Element ' . $elementpath );
-            $ret = call_user_func_array( $functionname , $args );
+            $element = New $classname();
+            $ret = call_user_func_array( array( $element, 'Render' ), $args );
             $this->mWater->ProfileEnd();
             
 			return $ret;
@@ -79,8 +80,7 @@
     		$pagesmap = Project_PagesMap(); // Gets an array with the actual filenames on the server
             
             if ( !isset( $pagesmap[ $this->mMasterElementAlias ] ) ) {
-                $this->mWater->Notice( 'Requested master element alias is not defined in pagesmap: ' . $this->mMasterElementAlias );
-                return false; // not a master element
+                throw New Exception( 'Requested master element alias is not defined in pagesmap: ' . $this->mMasterElementAlias );
             }
             
             $master = $pagesmap[ $this->mMasterElementAlias ];
@@ -92,12 +92,10 @@
                 $elementid = $master;
             }
             
-            $functionname = $this->GetFunction( $elementid );
-            if ( $functionname === false ) {
-                return false;
-            }
-            $this->mWater->Profile( 'Render Element ' . $elementid );
-            $ret = Rabbit_TypeSafe_Call( $functionname , $this->mMainReq );
+            $classname = $this->GetClass( $elementid );
+            $element = New $classname();
+            $this->mWater->Profile( 'Render Master Element ' . $elementid );
+            $ret = Rabbit_TypeSafe_Call( array( $element, 'Render' ), $this->mMainReq );
             $this->mWater->ProfileEnd();
             
             if ( $ret === false ) { // boolean `false' should only be returned when the element does not exist

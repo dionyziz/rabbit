@@ -17,6 +17,7 @@
     }
     
 	class Database {
+        protected $mAlias;
 		protected $mDbName;
 		protected $mHost;
 		protected $mUsername;
@@ -43,6 +44,15 @@
 			$this->mCharSet = false;
             $this->mTables = array();
 		}
+		public function SetAlias( $value ) {
+			$this->mAlias = $value;
+		}
+		public function SetCharset( $charset ) {
+			if ( $this->mCharSet !== $charset ) {
+				$this->mCharSet = $charset;
+				$this->mCharSetApplied = false;
+			}
+		}
 		public function Connect( $host = 'localhost' ) {
 			$this->mHost = $host;
             
@@ -62,6 +72,9 @@
         }
         public function Port() {
             return $this->mPort;
+        }
+        public function Alias() {
+            return $this->mAlias;
         }
         public function Equals( Database $target ) {
             return $this->Link() == $target->Link();
@@ -96,12 +109,6 @@
                 return $this->SwitchDb( $this->mDbName );
 			}
 			return false;
-		}
-		public function SetCharset( $charset ) {
-			if ( $this->mCharSet !== $charset ) {
-				$this->mCharSet = $charset;
-				$this->mCharSetApplied = false;
-			}
 		}
 		private function CharSetApply() {
 			if ( !$this->mCharSetApplied ) {
@@ -146,7 +153,9 @@
             return New DBQuery( $rawsql, $this, $this->mDriver );
         }
         public function AttachTable( $alias, $actual ) {
-            if ( !preg_match( '#^[\.a-zA-Z0-9_\-]+$#', $alias ) ) {
+            global $rabbit_settings;
+
+            if ( !$rabbit_settings[ 'production' ] && !preg_match( '#^[\.a-zA-Z0-9_\-]+$#', $alias ) ) {
                 throw New DBException( 'Invalid database table alias `' . $alias . '\'' );
             }
             $this->mTables[ $alias ] = New DBTable( $this, $actual, $alias );

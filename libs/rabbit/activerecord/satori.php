@@ -5,7 +5,7 @@
     
     global $libs;
     
-    $libs->Load( 'rabbit/overloadable' );
+    // $libs->Load( 'rabbit/overloadable' );
     $libs->Load( 'rabbit/activerecord/finder' );
     
     class SatoriException extends Exception {
@@ -123,7 +123,8 @@
             return $target;
         }
         public function CopyFrom( $obj ) {
-            w_assert( $obj instanceof $this->mTargetModelClass );
+            w_assert( is_object( $obj ), 'CopyFrom on HasOne relation of ' . get_class( $this->mQueryModel ) . ' must be an object'  );
+            w_assert( $obj instanceof $this->mTargetModelClass, 'CopyFrom on HasOne relation of ' . get_class( $this->mQueryModel ) . ' must be a `' . $this->mTargetModelClass . ' instance, but ' . get_class( $obj ) . ' given'  );
 
             $this->mRetrieved = $obj;
         }
@@ -187,7 +188,7 @@
     }
     
     // Active Record Base
-    abstract class Satori extends Overloadable {
+    abstract class Satori {
         protected $mDb; // database object referring to the database where the object is stored
         protected $mDbName; // name of the database we'll use for this object (defaults to your first database)
         protected $mDbTableAlias; // database table alias this object is mapped from
@@ -208,48 +209,29 @@
         private $mOldRelations; // temporary holder of old relations while they are being redefined
         protected $mReadOnlyModified; // boolean; whether there has been an attempt to modify a read-only attribute (allowed providing the object is non-persistent and never made persistent)
         private $mAllowRelationDefinition;
-        
-        protected function Relations() {
-            // override me
-        }
-        public function IsSignificantAttribute( $attribute ) {
-            // does a change in the field named $fieldname that a relation relies upon require a relation rebuild?
-            // not if the value is generated within this very instance in a way that the related classes cannot access directly,
-            // such as an autoincrement value
-
-            if ( $this->mAutoIncrementField == $this->mAttribute2DbField[ $attribute ] ) {
-                return false;
+       
+	   	protected function __get( $key ) {
+			switch ( $key ) {
+				case 'Attribute2DbField':
+				case 'Db':
+				case 'DbTable':
+				case 'DbFields':
+				case 'PrimaryKeyFields':
+					$attribute = 'm' . $key;
+					return $this->$attribute;
+			}
+            
+			if ( isset( $this->mRelations[ $key ] ) ) {
+                return $this->mRelations[ $key ]->Retrieve();
             }
-            return true;
-        }
-        public function GetAttribute2DbField() {
-            return $this->mAttribute2DbField;
-        }
-        protected function HasOne( $className, $foreignKey ) {
-            if ( !$this->mAllowRelationDefinition ) {
-                throw New SatoriException( 'HasOne relations must be defined in the Relations() function of `' . get_class( $this ) . '\'' );
+            
+            $key = ucfirst( $key );
+            if ( !in_array( $key, $this->mDbFields ) ) {
+                throw New SatoriException( 'Attempting to read non-existing Satori property `' . $key . '\' on a `' . get_class( $this ) . '\' instance' );
             }
-            return New RelationHasOne( $this, $className, $foreignKey );
-        }
-        protected function HasMany( $finderName, $methodName, $foreignKey ) {
-            if ( !$this->mAllowRelationDefinition ) {
-                throw New SatoriException( 'HasOne relations must be defined in the Relations() function of `' . get_class( $this ) . '\'' );
-            }
-            return New RelationHasMany( $this, $finderName, $methodName, $foreignKey );
-        }
-        protected function GetDb() {
-            return $this->mDb;
-        }
-        protected function GetDbTable() {
-            return $this->mDbTable;
-        }
-        protected function GetDbFields() {
-            return $this->mDbFields;
-        }
-        public function __set( $name, $value ) {
-            if ( parent::__set( $name, $value ) === true ) {
-                return;
-            }
+            return $this->mCurrentValues[ $key ];
+		}
+        protected function __set( $name, $value ) {
             if ( $this->mAllowRelationDefinition && $value instanceof Relation ) {
                 if ( isset( $this->mOldRelations[ $name ] ) ) {
                     if ( $this->mOldRelations[ $name ]->Equals( $value ) ) {
@@ -277,20 +259,30 @@
             
             $this->mCurrentValues[ $name ] = $value;
         }
-        public function __get( $name ) {
-            if ( !is_null( $got = parent::__get( $name ) ) ) {
-                return $got;
+        protected function Relations() {
+            // override me
+        }
+        public function IsSignificantAttribute( $attribute ) {
+            // does a change in the field named $fieldname that a relation relies upon require a relation rebuild?
+            // not if the value is generated within this very instance in a way that the related classes cannot access directly,
+            // such as an autoincrement value
+
+            if ( $this->mAutoIncrementField == $this->mAttribute2DbField[ $attribute ] ) {
+                return false;
             }
-            
-            if ( isset( $this->mRelations[ $name ] ) ) {
-                return $this->mRelations[ $name ]->Retrieve();
+            return true;
+        }
+        protected function HasOne( $className, $foreignKey ) {
+            if ( !$this->mAllowRelationDefinition ) {
+                throw New SatoriException( 'HasOne relations must be defined in the Relations() function of `' . get_class( $this ) . '\'' );
             }
-            
-            $name = ucfirst( $name );
-            if ( !in_array( $name, $this->mDbFields ) ) {
-                throw New SatoriException( 'Attempting to read non-existing Satori property `' . $name . '\' on a `' . get_class( $this ) . '\' instance' );
+            return New RelationHasOne( $this, $className, $foreignKey );
+        }
+        protected function HasMany( $finderName, $methodName, $foreignKey ) {
+            if ( !$this->mAllowRelationDefinition ) {
+                throw New SatoriException( 'HasOne relations must be defined in the Relations() function of `' . get_class( $this ) . '\'' );
             }
-            return $this->mCurrentValues[ $name ];
+            return New RelationHasMany( $this, $finderName, $methodName, $foreignKey );
         }
         public function __isset( $name ) {
             return in_array( $name, $this->mDbFields );
@@ -323,9 +315,6 @@
         public function Exists() {
             // check if the current object exists; this can be overloaded if you wish, but you can also set $this->mExists
             return $this->mExists;
-        }
-        protected function GetPrimaryKeyFields() {
-            return $this->mPrimaryKeyFields;
         }
         protected function DefineRelations() {
             $this->mOldRelations = $this->mRelations;
@@ -413,7 +402,8 @@
                 $change = $this->mDbTable->InsertInto( $inserts );
                 if ( $change->Impact() ) {
                     if ( $this->mAutoIncrementField !== false ) {
-                        $this->mCurrentValues[ $this->mDbFields[ $this->mAutoIncrementField ] ] = $change->InsertId();
+                        $field = $this->mDbFields[ $this->mAutoIncrementField ];
+                        $this->mPreviousValues[ $field ] = $this->mCurrentValues[ $field ] = $change->InsertId();
                     }
                 }
                 $this->mExists = true;
@@ -479,6 +469,8 @@
             return $res;
         }
         protected function InitializeFields() {
+            global $rabbit_settings;
+
             if ( !( $this->mDb instanceof Database ) ) {
                 throw New SatoriException( 'Database not specified or invalid for Satori class `' . get_class( $this ). '\'' );
             }
@@ -489,10 +481,7 @@
                 throw New SatoriException( 'Database table not specified, invalid, or database table alias non-existing for Satori class `' . get_class( $this ) . '\'' );
             }
             
-            $this->mDbColumns = array();
-            foreach ( $this->mDbTable->Fields as $field ) {
-                $this->mDbColumns[ $field->Name ] = $field;
-            }
+            $this->mDbColumns = $this->mDbTable->Fields;
             if ( !count( $this->mDbColumns ) ) {
                 throw New SatoriException( 'Database table `' . $this->mDbTableAlias . '\' used for Satori class `' . get_class( $this ) . '\' does not have any columns' );
             }
@@ -502,14 +491,13 @@
             }
             
             $this->mDbFields = array();
-            $this->mDbFieldKeys = array();
+            $this->mDbFieldKeys = array_keys( $this->mDbColumns );
             $this->mAutoIncrementField = false;
             
             foreach ( $this->mDbColumns as $column ) {
                 $parts = explode( '_', $column->Name );
                 $attribute = ucfirst( $parts[ 1 ] );
                 $this->mDbFields[ $column->Name ] = $attribute;
-                $this->mDbFieldKeys[] = $column->Name;
                 if ( $column->IsAutoIncrement ) {
                     $this->mAutoIncrementField = $column->Name;
                     // autoincrement attributes are read-only
@@ -524,21 +512,25 @@
                     foreach ( $index->Fields as $field ) {
                         $this->mPrimaryKeyFields[] = $field->Name;
                     }
+                    break;
                 }
             }
             if ( !count( $this->mPrimaryKeyFields ) ) {
                 throw New SatoriException( 'Database table `' . $this->mDbTableAlias . '\' used for Satori class `' . get_class( $this ) . '\' does not have a primary key' );
             }
             
-            $this->mCurrentValues = array();
-            foreach ( $this->mDbFields as $fieldname => $attributename ) {
-                w_assert( is_string( $fieldname ) );
-                w_assert( preg_match( '#^[a-zA-Z0-9_\-]+$#', $fieldname ) );
-                w_assert( is_string( $attributename ) );
-                w_assert( preg_match( '#^[a-zA-Z][a-zA-Z0-9]*$#', $attributename ) );
-                
-                // default value
-                $this->mCurrentValues[ $attributename ] = false;
+            // default values
+            $this->mCurrentValues = array_combine( $this->mDbFields, array_fill( 0, count( $this->mDbFields ), false ) );
+            
+            if ( !$rabbit_settings[ 'production' ] ) {
+                foreach ( $this->mDbFields as $fieldname => $attributename ) {
+                    if ( !$rabbit_settings[ 'production' ] ) {
+                        w_assert( is_string( $fieldname ) );
+                        w_assert( preg_match( '#^[a-zA-Z0-9_\-]+$#', $fieldname ) );
+                        w_assert( is_string( $attributename ) );
+                        w_assert( preg_match( '#^[a-zA-Z][a-zA-Z0-9]*$#', $attributename ) );
+                    } 
+                }
             }
         }
         public function FetchPrototypeChanges() {

@@ -27,7 +27,7 @@
 	$water->SetSetting( 'images_url'   , $rabbit_settings[ 'imagesurl' ] . 'water/' );
 	$water->SetSetting( 'css_url'      , $rabbit_settings[ 'webaddress' ] . '/css/water.css' );
 	$water->SetSetting( 'server_root'  , $rabbit_settings[ 'rootdir' ] );
-    $water->SetSetting( 'calltracelvl' , 4 );
+    $water->SetSetting( 'calltracelvl' , 8 );
     
     w_assert( isset( $rabbit_settings[ 'rootdir' ] ), "`rootdir' setting is not defined" );
     w_assert( isset( $rabbit_settings[ 'applicationname' ] ), "`applicationname' setting is not defined" );
@@ -38,7 +38,9 @@
     if ( !isset( $rabbit_settings[ 'timezone' ] ) ) {
         $rabbit_settings[ 'timezone' ] = 'GMT';
     }
-    mb_internal_encoding( 'UTF-8' );
+    if ( function_exists( 'mb_internal_encoding' ) ) {
+        mb_internal_encoding( 'UTF-8' );
+    }
     if ( isset( $rabbit_settings[ 'locale' ] ) ) {
         setlocale( LC_ALL, $rabbit_settings[ 'locale' ] );
     }
@@ -138,12 +140,14 @@
             $GLOBALS[ $dbname ] = new Database( $database[ 'name' ], $driver );
             $GLOBALS[ $dbname ]->Connect( $database[ 'hostname' ] );
             $GLOBALS[ $dbname ]->Authenticate( $database[ 'username' ] , $database[ 'password' ] );
-            $GLOBALS[ $dbname ]->SetCharset( $database[ 'charset' ] );
+            $GLOBALS[ $dbname ]->SetCharset( $database[ 'charset' ] ); 
+            $GLOBALS[ $dbname ]->SetAlias( $dbname );
             
             foreach ( $database[ 'tables' ] as $alias => $tablename ) {
                 if ( is_int( $alias ) ) {
                     $alias = $tablename;
                 }
+                // TODO: Optimize: Lazy loading?
                 $GLOBALS[ $dbname ]->AttachTable( $alias, $database[ 'prefix' ] . $tablename );
             }
         }

@@ -18,12 +18,14 @@ var Coala = {
     },
 	Cold: function ( unitid, parameters, failurecallback ) { // get, non-cacheable
         this._AppendRequest( unitid, parameters, 'cold', failurecallback );
+        clearTimeout( this.LazyCommit );
 		this.LazyCommit = setTimeout( function () {
             Coala.Commit();
         }, 50 );
 	},
 	Warm: function ( unitid, parameters, failurecallback ) { // post
 		this._AppendRequest( unitid, parameters, 'warm', failurecallback );
+        clearTimeout( this.LazyCommit );
 		this.LazyCommit = setTimeout( function () {
             Coala.Commit();
         }, 50 );
@@ -223,10 +225,11 @@ var Coala = {
 					}
 				};
 				// okay, after we've set up everything, we can safely send the request
-				xh.send(sVars);
+				xh.send( sVars );
 			}
 			catch ( z ) { 
 				// woops, something went wrong
+                alert( 'Something went wrong during a Coala request: ' + z );
 				return false; 
 			}
 			// everything okay
@@ -259,6 +262,7 @@ var Coala = {
 		
 		// no xmlhttp object was created, the constructor should return null
 		if ( !xh ) {
+            alert( 'Failed to create XMLHTTP object; check your browser?' );
 			return null;
         }
 		

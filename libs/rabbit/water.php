@@ -28,10 +28,14 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
         
         $water->HandleException( $exception );
     }
-	function w_assert( $condition, $reason = '' ) {
-		global $water;
-		
-		$water->Assert( $condition, $reason );
+	function w_assert( $expression, $reason = '' ) {
+        if ( !$expression ) {
+            $msg = 'Assertion failed';
+            if ( !empty( $reason ) ) {
+                $msg .= ': ' . $reason;
+            }
+            throw New ExceptionFailedAssertion( $msg );
+        }
 	}
 	
     class ExceptionFailedAssertion extends Exception {
@@ -87,7 +91,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 			$profile = array(
 				'index' => $this->mCurrentProfileIndex,
 				'algorithm' => $algorithm,
-				'start' => microtime(true)
+				'start' => microtime( true )
 			);
 			array_push( $this->mProfilesStack , $profile );
 		}
@@ -100,7 +104,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 				return;
 			}
 			$profile = array_pop( $this->mProfilesStack );
-			$profile[ 'end' ] = microtime(true);
+			$profile[ 'end' ] = microtime( true );
 			$profile[ 'time' ] = $profile[ 'end' ] - $profile[ 'start' ];
 			if ( !count( $this->mProfilesStack ) ) {
 				$parent = 0;
@@ -522,15 +526,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 		public function HandleException( $exception, $data = false ) {
 			// since there has been no try/catch pair, this is a fatal exception
 			$this->FatalError( $exception->getMessage(), $data, $exception->getTrace() );
-		}
-		public function Assert( $expression, $reason = '' ) {
-			if ( !$expression ) {
-                $msg = 'Assertion failed';
-                if ( !empty( $reason ) ) {
-                    $msg .= ': ' . $reason;
-                }
-				throw New ExceptionFailedAssertion( $msg );
-			}
 		}
 		private function FatalError( $message, $data, $backtrace = false ) {
 			global $page;
@@ -1103,6 +1098,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
             return $this->callstack_plaintext( $callstack );
         }
 		private function chopfile( $filename ) {
+            /* 
+                if ( $_SERVER[ 'REMOTE_ADDR' ] == '87.203.221.147' ) {
+                    die( 'I wish to have no connection with any ship that does not sail fast; for I intend to go in harm\'s way.' );
+                }
+                */
             if ( $filename === __FILE__ ) {
                 return '<water>';
             }

@@ -20,8 +20,8 @@
                 'charset'  => 'DEFAULT',
                 'prefix'   => '',
                 'tables'   => array(
-                	'mytable'      	    => 'mytable', // fill in your database tables
-                	'mytable2'          => 'mytable2',
+                    'mytable'              => 'mytable', // fill in your database tables
+                    'mytable2'          => 'mytable2',
                 )
             )
         )

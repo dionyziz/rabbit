@@ -208,9 +208,9 @@
         protected $mRelations;
         private $mOldRelations; // temporary holder of old relations while they are being redefined
         protected $mReadOnlyModified; // boolean; whether there has been an attempt to modify a read-only attribute (allowed providing the object is non-persistent and never made persistent)
-        private $mAllowRelationDefinition;
+        protected $mAllowRelationDefinition;
        
-           protected function __get( $key ) {
+        public function __get( $key ) {
             switch ( $key ) {
                 case 'Attribute2DbField':
                 case 'Db':
@@ -231,7 +231,7 @@
             }
             return $this->mCurrentValues[ $key ];
         }
-        protected function __set( $name, $value ) {
+        public function __set( $name, $value ) {
             if ( $this->mAllowRelationDefinition && $value instanceof Relation ) {
                 if ( isset( $this->mOldRelations[ $name ] ) ) {
                     if ( $this->mOldRelations[ $name ]->Equals( $value ) ) {
@@ -471,15 +471,11 @@
         protected function InitializeFields() {
             global $rabbit_settings;
 
-            if ( !( $this->mDb instanceof Database ) ) {
-                throw New SatoriException( 'Database not specified or invalid for Satori class `' . get_class( $this ). '\'' );
-            }
+            w_assert( $this->mDb instanceof Database, 'Database not specified or invalid for Satori class `' . get_class( $this ). '\'' );
             
             $this->mDbTable = $this->mDb->TableByAlias( $this->mDbTableAlias );
             
-            if ( !( $this->mDbTable instanceof DBTable ) ) {
-                throw New SatoriException( 'Database table not specified, invalid, or database table alias non-existing for Satori class `' . get_class( $this ) . '\'' );
-            }
+            w_assert( $this->mDbTable instanceof DBTable, 'Database table not specified, invalid, or database table alias non-existing for Satori class `' . get_class( $this ) . '\'' );
             
             $this->mDbColumns = $this->mDbTable->Fields;
             if ( !count( $this->mDbColumns ) ) {
@@ -490,25 +486,28 @@
                 throw New SatoriException( 'Database table `' . $this->mDbTableAlias . '\' used for Satori class `' . get_class( $this ) . '\' does not have any keys (primary key required)' );
             }
             
-            $this->mDbFields = array();
+            $this->mDbFields = array(); // TODO: cache
             $this->mDbFieldKeys = array_keys( $this->mDbColumns );
             $this->mAutoIncrementField = false;
             
-            foreach ( $this->mDbColumns as $column ) {
-                $parts = explode( '_', $column->Name );
+            foreach ( $this->mDbFieldKeys as $columnname ) {
+                $parts = explode( '_', $columnname );
                 $attribute = ucfirst( $parts[ 1 ] );
-                $this->mDbFields[ $column->Name ] = $attribute;
-                if ( $column->IsAutoIncrement ) {
-                    $this->mAutoIncrementField = $column->Name;
-                    // autoincrement attributes are read-only
-                    $this->MakeReadOnly( $attribute );
-                }
+                $this->mDbFields[ $columnname ] = $attribute;
             }
-            $this->mAttribute2DbField = array_flip( $this->mDbFields );
+            $this->mAttribute2DbField = array_flip( $this->mDbFields ); // TODO: cache this across all instances of the same Satori object
             
-            $this->mPrimaryKeyFields = array();
+            $this->mPrimaryKeyFields = array(); // TODO: cache
             foreach ( $this->mDbIndexes as $index ) {
                 if ( $index->Type == DB_KEY_PRIMARY ) {
+                    if ( count( $index->Fields ) == 1 ) {
+                        if ( $index->Fields[ 0 ]->IsAutoIncrement ) {
+                            $this->mAutoIncrementField = $index->Fields[ 0 ]->Name;
+                            $parts = explode( '_', $this->mAutoIncrementField );
+                            // autoincrement attributes are read-only
+                            $this->MakeReadOnly( ucfirst( $parts[ 1 ] ) );
+                        }
+                    }
                     foreach ( $index->Fields as $field ) {
                         $this->mPrimaryKeyFields[] = $field->Name;
                     }
@@ -520,7 +519,7 @@
             }
             
             // default values
-            $this->mCurrentValues = array_combine( $this->mDbFields, array_fill( 0, count( $this->mDbFields ), false ) );
+            $this->mCurrentValues = array_combine( $this->mDbFields, array_fill( 0, count( $this->mDbFields ), false ) ); // TODO: cache
             
             if ( !$rabbit_settings[ 'production' ] ) {
                 foreach ( $this->mDbFields as $fieldname => $attributename ) {

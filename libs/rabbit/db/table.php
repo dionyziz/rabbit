@@ -2,9 +2,10 @@
     function DBTable_GetInfo( DBTable $table, $type = 'indexes' ) {
         global $mc;
         global $water;
+        global $rabbit_settings;
         static $cache = false;
 
-        $key = 'dbcache';
+        $key = 'dbcache:' . $rabbit_settings[ 'dbschemaversion' ];
         w_assert( $table instanceof DBTable );
         $tablename = $table->Name;
         $tablealias = $table->Alias;

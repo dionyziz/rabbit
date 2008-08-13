@@ -1,3 +1,24 @@
+== 0.7.14000 ==
+=== Unit testing ===
+* Bugfix: Unit test assertion message now appears in tests failed by exception.
+
+=== Database ===
+* Added cache invalidation support.
+
+=== Active record ===
+* Optimization: Small optimizations in InitializeFields and Satori construction.
+
+=== Element handling ===
+* Persistent elements support.
+
+=== Helpers ===
+* Generalized dateDiff function. (indy)
+
+=== Others ===
+* Bugfix: XML text node siblings are now merged correctly.
+* Bugfix: Fixed a typo that caused local referrers to fail under certain circumstances.
+* Bugfix: Now following the PHP recommendation to make all magic class methods public. (abresas)
+
 == 0.7.12000 ==
 === Database ===
 * Optimization: Table indexes and fields are now cached using memcache if supported.
@@ -32,7 +53,7 @@
 * Database failures are now reported clearly as exceptions.
 
 === Active record ===
-* Optimization: Added ability to prefetch relation objects for HadOne relations.
+* Optimization: Added ability to prefetch relation objects for HasOne relations.
 * Bugfix: OnUpdate() is called with correct argument for previous values when no modifications occurred.
 * Bugfix: Updating existing objects with multifield primary keys is now possible.
 * Bugfix: It's now possible to modify the primary key of an object itself.
@@ -42,7 +63,7 @@
 * Added more meaningful error messages for invalid function names.
 
 === Action handling ===
-* Security: Cross-side-scripting could allow user impersonation to execute certain actions via POST.
+* Security: Cross-site-scripting could allow user impersonation to execute certain actions via POST.
 * Added exceptional error for non-functional action outputting.
 * Added exceptional error for actions that do not return a valid redirection.
 
@@ -107,8 +128,6 @@
 * Undefined variables now throw exceptions.
 * Added water setting 'jsonstartdepth' to allow for limiting the depth of error reporting.
 
-
 == 0.7.7945 ==
-
 Initial public version.
 

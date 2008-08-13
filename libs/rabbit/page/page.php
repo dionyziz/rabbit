@@ -49,13 +49,12 @@ abstract class Page {
     }
     protected function GenerateBody() {
         global $water;
-        global $elemental;
         
         $water->Profile( 'Render Page' );
         
         ob_start();
         foreach ( $this->mMainElements as $mainelement ) {
-            $ret = $elemental->MainElement( $mainelement[ 'name' ], $mainelement[ 'req' ] );
+            $ret = Element::MainElement( $mainelement[ 'name' ], $mainelement[ 'req' ] );
             
             if ( $ret instanceof HTTPRedirection ) {
                 $this->mRedirection = $ret;
@@ -95,8 +94,6 @@ abstract class Page {
         $this->mTitle = $title;
     }
     public function AttachMainElement( $mainelementid , $req ) {
-        global $water;
-        
         w_assert( is_array( $req ) );
         
         $this->mMainElements[] = array(
@@ -359,11 +356,11 @@ final class PageDOMElement extends PageDOMEntity {
     private $mChildren;
     
     /* attribute magic functions */
-    private function __set( $name , $value ) {
+    public function __set( $name , $value ) {
         w_assert( $this->ValidAttribute( $name ) );
         $this->mAttributes[ $name ] = $value;
     }
-    private function __get( $name ) {
+    public function __get( $name ) {
         global $water;
         
         w_assert( $this->ValidAttribute( $name ) );
@@ -448,7 +445,6 @@ final class PageCoala extends Page {
     }
     protected function GenerateBody() {
         global $water;
-        global $elemental;
         global $coala;
         
         $water->Profile( 'Render Unit' );

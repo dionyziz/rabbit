@@ -406,11 +406,12 @@ class memcached implements MemCache
          foreach ($val as $k => $v)
             printf("MemCache: sock %s got %s => %s\r\n", $sock, $k, $v);
   
-      $water->Trace( "Memcache: HIT '$key'" );
-      
       if (isset($val[$key])) {
+          $water->Trace( "Memcache: HIT '$key'" );
+      
           return $val[$key];
       }
+      $water->Trace( "Memcache: MISS '$key'" );
       return false;
    }
 

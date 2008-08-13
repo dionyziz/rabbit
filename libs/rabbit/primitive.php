@@ -10,7 +10,6 @@
     // it is important that these singletons keeps their names, as they are used as-they-are in the code
     global $water;
     global $libs;
-    global $elemental;
     global $page;
     
     Rabbit_ClearSuperGlobals();
@@ -37,6 +36,9 @@
     }
     if ( !isset( $rabbit_settings[ 'timezone' ] ) ) {
         $rabbit_settings[ 'timezone' ] = 'GMT';
+    }
+    if ( !isset( $rabbit_settings[ 'dbschemaversion' ] ) ) {
+        $rabbit_settings[ 'dbschemaversion' ] = 0;
     }
     if ( function_exists( 'mb_internal_encoding' ) ) {
         mb_internal_encoding( 'UTF-8' );
@@ -157,8 +159,8 @@
     }
     
     // load the elements system
-    $elemental = $libs->Load( 'rabbit/element' );
-    $elemental->SetSetting( 'production' , $rabbit_settings[ 'production' ] );
+    $libs->Load( 'rabbit/element' );
+    Element::SetSetting( 'production', $rabbit_settings[ 'production' ] );
 
     $libs->Load( 'rabbit/page/page' );
     $libs->Load( 'project' );

@@ -378,6 +378,8 @@
             switch ( $key ) {
                 case 'Callstack':
                     return $this->mCallstack;
+                default:
+                    return parent::__get( $key );
             }
         }
         public function AssertResultFailedByException( $message, $callstack ) {

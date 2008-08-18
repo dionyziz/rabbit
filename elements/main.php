@@ -8,7 +8,7 @@
             // $page->AttachScript( 'js/main.js' );
 
             ob_start();
-            $res = MasterElement();
+            $res = Element::MasterElement();
             $master = ob_get_clean();
             
             // place element calls to headers here

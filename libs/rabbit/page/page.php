@@ -226,14 +226,14 @@ class PageHTML extends Page {
             // force uncaching if necessary
             echo filemtime( $this->mBaseIncludePath . '/' . $script[ 'filename' ] );
         }
-        ?>"></script><?php
+        ?>" charset="utf-8"></script><?php
         if ( $script[ 'ieversion' ] != '' ) {
             ?><![endif]--><?php
             echo "\n";
         }
     }
     private function OutputHTMLMain() {
-        ob_start( 'html_filter' );
+        ob_start();
         ?><body><?php
         echo $this->mBody;
         foreach ( $this->mScripts as $script ) {
@@ -257,7 +257,7 @@ class PageHTML extends Page {
         echo ob_get_clean();
     }
     private function OutputHTMLEnd() {
-       ?></html><?php
+        ?></html><?php
     }
     private function CheckXML() {
         $xmlmimetype = 'application/xhtml+xml';
@@ -432,14 +432,17 @@ final class PageCoala extends Page {
         
         parent::__construct();
     }
+    private function OutputHeaders() {
+        header( 'Content-type: text/javascript; charset=utf-8' );
+    }
     public function Output() {
         $this->GenerateBody();
         $this->OutputStart();
+        $this->OutputHeaders();
         $this->OutputPage();
         $this->OutputEnd();
     }
     protected function OutputPage() {
-        header( 'Content-type: text/javascript' );
         ?>while(1);<?php // JS hijacking prevention
         echo $this->mBody;
     }

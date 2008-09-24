@@ -224,7 +224,6 @@
         }
         public function GetSignificantArgs( $args ) {
             global $mc;
-            global $rabbit_settings;
 
             w_assert( is_array( $this->mPersistent ) );
 
@@ -258,7 +257,7 @@
                 }
                 Element::SetPersistentElementSignificantArgs( $this->mPath, $ret );
                 
-                $maskinfo = Mask( 'elements/' . $this->mPath, !$rabbit_settings[ 'production' ] );
+                $maskinfo = Mask( $this->mPath, !$rabbit_settings[ 'production' ] );
 
                 Element::SetPersistentElementMtime( $this->mPath, filemtime( $maskinfo[ 'realpath' ] ) );
                 w_assert( strlen( $this->mPath ) < 73, 'Persistent element paths must be less than 73 characters long; "' . $this->mPath . '" exceeds this limit' );

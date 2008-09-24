@@ -5,8 +5,8 @@
     
     global $libs;
     
-    // $libs->Load( 'rabbit/overloadable' );
     $libs->Load( 'rabbit/activerecord/finder' );
+    $libs->Load( 'rabbit/activerecord/collection' );
     
     class SatoriException extends Exception {
     }
@@ -187,6 +187,19 @@
         }
     }
     
+    function Satori_GetPrototypeInstance( $classname ) {
+        // just a faster way of getting a prototype satori extension instance than instantiating every time
+        // this instance should only be used for information retrieval and should not be modified or made persistent
+
+        // TODO: Move this into a static method within class Satori once late static binding is available in PHP 5.3
+        static $instances;
+
+        if ( !isset( $instances[ $classname ] ) ) {
+            $instances[ $classname ] = New $classname();
+        }
+        return $instances[ $classname ];
+    }
+
     // Active Record Base
     abstract class Satori {
         protected $mDb; // database object referring to the database where the object is stored
@@ -209,6 +222,7 @@
         private $mOldRelations; // temporary holder of old relations while they are being redefined
         protected $mReadOnlyModified; // boolean; whether there has been an attempt to modify a read-only attribute (allowed providing the object is non-persistent and never made persistent)
         protected $mAllowRelationDefinition;
+        protected $mInsertIgnore = false;
        
         public function __get( $key ) {
             switch ( $key ) {
@@ -361,7 +375,7 @@
                 $sql .= implode( ', ', $updates );
                 $sql .= ' WHERE ';
                 $conditions = array();
-                foreach ( $this->PrimaryKeyFields as $primarykeyfield ) {
+                foreach ( $this->mPrimaryKeyFields as $primarykeyfield ) {
                     $conditions[] = '`' . $primarykeyfield . '` = :_' . $primarykeyfield;
                 }
                 $sql .= implode( ' AND ', $conditions );
@@ -399,7 +413,7 @@
                     $inserts[ $fieldname ] = $this->mCurrentValues[ $attributename ];
                     $this->mPreviousValues[ $attributename ] = $this->mCurrentValues[ $attributename ];
                 }
-                $change = $this->mDbTable->InsertInto( $inserts );
+                $change = $this->mDbTable->InsertInto( $inserts, $this->mInsertIgnore );
                 if ( $change->Impact() ) {
                     if ( $this->mAutoIncrementField !== false ) {
                         $field = $this->mDbFields[ $this->mAutoIncrementField ];
@@ -446,14 +460,14 @@
                         :' . $this->mDbTableAlias . '
                     WHERE ';
             $conditions = array();
-            foreach ( $this->PrimaryKeyFields as $primary ) {
+            foreach ( $this->mPrimaryKeyFields as $primary ) {
                 $conditions[] = '`' . $primary . '` = :' . $primary;
             }
             $sql .= implode( ' AND ', $conditions );
             $sql .= ' LIMIT 1';
             $query = $this->mDb->Prepare( $sql );
             $i = 0;
-            foreach ( $this->PrimaryKeyFields as $primary ) {
+            foreach ( $this->mPrimaryKeyFields as $primary ) {
                 // delete using the values of mPreviousValues in the primary key
                 $query->Bind( $primary, $this->mPreviousValues[ $this->mDbFields[ $primary ] ] );
                 ++$i;
@@ -647,7 +661,7 @@
                 $conditions = array();
                 $i = 0;
                 $invalid = false;
-                foreach ( $this->PrimaryKeyFields as $primary ) {
+                foreach ( $this->mPrimaryKeyFields as $primary ) {
                     if ( $this->mAutoIncrementField == $primary ) {
                         if ( $args[ $i ] == 0 ) { // autoincrement field is 0, object can't exist
                             // (this situation can be created by manually inserting a row with autoincrement set to 0, but it's a rare case and a good optimization to care about)
@@ -663,7 +677,7 @@
                     $sql .= ' LIMIT 1';
                     $query = $this->mDb->Prepare( $sql );
                     $i = 0;
-                    foreach ( $this->PrimaryKeyFields as $primary ) {
+                    foreach ( $this->mPrimaryKeyFields as $primary ) {
                         $query->Bind( $primary, $args[ $i ] );
                         ++$i;
                     }
@@ -709,8 +723,5 @@
             }
             return $str;
         }
-    }
-    
-    class Collection {
     }
 ?>

@@ -6,7 +6,7 @@
         protected $mAttribute2DbField;
         protected $mDb;
         
-        protected function FindByPrototype( $prototype, $offset = 0, $limit = 25, $order = false ) {
+        protected function FindByPrototype( $prototype, $offset = 0, $limit = 25, $order = false, $calcfoundrows = false ) {
             w_assert( $prototype instanceof $this->mModel, 'Prototype specified in FindByPrototype call in finder `' . get_class( $this ) . '\' must be an instance of `' . $this->mModel . '\'' );
             w_assert( is_int( $offset ), 'Offset must be an integer in FindByPrototype call in finder `' . get_class( $this ) . '\' ' . gettype( $offset ) . ' given' );
             w_assert( is_int( $limit ), 'Limit must be an integer in FindByPrototype call in finder `' . get_class( $this ) . '\', ' . gettype( $limit ) . ' given' );
@@ -36,7 +36,11 @@
                 }
             }
             
-            $sql = 'SELECT
+            $sql = 'SELECT ';
+            if ( !$unique && $calcfoundrows ) {
+                $sql .= 'SQL_CALC_FOUND_ROWS'; 
+            }
+            $sql .= '
                         *
                     FROM
                         :' . $prototype->DbTable->Alias;
@@ -92,20 +96,41 @@
                 }
                 return false;
             }
-            return $this->FindBySQLResource( $res );
+            $totalcount = false;
+            if ( $calcfoundrows ) {
+                $totalcount = ( int )array_shift(
+                    $this->mDb->Prepare(
+                        'SELECT FOUND_ROWS();'
+                    )->Execute()->FetchArray()
+                );
+            }
+            return $this->FindBySQLResource( $res, $totalcount );
         }
-        protected function FindBySQLResource( DBResource $res ) {
+        protected function FindBySQLResource( DBResource $res, $totalcount = false ) {
+            if ( $totalcount !== false ) {
+                return New Collection( $res->ToObjectsArray( $this->mModel ), $totalcount );
+            }
             return $res->ToObjectsArray( $this->mModel );
         }
+        protected function Count() {
+            $query = $this->mDb->Prepare(
+                "SELECT
+                    COUNT( * ) AS numrows
+                FROM
+                    :" . $this->mDbTableAlias . ";"
+            );
+            $query->BindTable( $this->mDbTableAlias );
+            $res = $query->Execute();
+            $row = $res->FetchArray();
+            return ( int )$row[ 'numrows' ];
+        }
         final public function __construct() {
-            if ( empty( $this->mModel ) ) {
-                throw New SatoriException( 'mModel not defined for finder `' . get_class( $this ) . '\'' );
-            }
-            $prototype = New $this->mModel();
-            if ( !is_subclass_of( $prototype, 'Satori' ) ) {
-                throw New SatoriException( 'mModel defined for finder `' . get_class( $this ) . '\' must be a class extending Satori' );
-            }
-            $this->mDb = $prototype->Db; // TODO: cache this across all finder instances? (late static binding required?)
+            global $rabbit_settings;
+
+            w_assert( !empty( $this->mModel ), 'mModel not defined for finder `' . get_class( $this ) . '\'' );
+            $prototype = Satori_GetPrototypeInstance( $this->mModel );
+            w_assert( is_subclass_of( $prototype, 'Satori' ), 'mModel defined for finder `' . get_class( $this ) . '\' must be a class extending Satori' );
+            $this->mDb = $prototype->Db;
             w_assert( is_object( $this->mDb ) );
             $this->mDbTableAlias = $prototype->DbTable->Alias;
             $this->mDbIndexes = $prototype->DbTable->Indexes;

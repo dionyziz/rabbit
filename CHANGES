@@ -1,3 +1,24 @@
+== 0.7.15000 ==
+=== Database ===
+* Added the ability to bind and properly escape "LIKE" SQL arguments.
+* Added FLOAT SQL type support.
+
+=== Active record ===
+* Added the ability to perform INSERT IGNORE INTO instead of INSERT INTO when making an active record object persitent.
+* Added collections support.
+* Added the ability to count the number of total results produced by a given finder, ignoring the given limit.
+* Added default Count() finder to all finders to count all the records without any filtering.
+* Optimization: Each finder class now internally instantiates only one Satori object.
+* Optimization: mPrimaryKeyFields is used directly in some occations, avoiding a redundant function call. (abresas)
+* Optimization: Some non-production-critical exceptions changed to assertions.
+
+=== Page handling ===
+* Added explicit UTF-8 declaration for handling scripts properly in WebKit / Safari / Google Chrome.
+* Removed explicit output buffering filter, now making it possible to apply gz compression at the PHP level for reduced bandwidth and increased speed.
+
+=== Others ===
+* Modifications to XML children are now properly handled.
+
 == 0.7.14000 ==
 === Unit testing ===
 * Bugfix: Unit test assertion message now appears in tests failed by exception.

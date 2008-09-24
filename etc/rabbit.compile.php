@@ -1,6 +1,6 @@
 #!/usr/bin/php
 <?php
-    define( 'SOURCE', '/home/dionyziz/work/kamibu/etc/ceto/' );
+    define( 'SOURCE', '/home/dionyziz/work/kamibu/excalibur/phoenix/' );
     define( 'DESTINATION', '/home/dionyziz/work/kamibu/rabbit/' );
 
     $files = explode( "\n", file_get_contents( 'rabbit.compile.lst' ) );

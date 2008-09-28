@@ -135,7 +135,7 @@
 == 0.7.8974 ==
 === Unit testing ===
 * Exceptional errors in test cases now do not surpass previous success or error messages in the same test run.
-* Bugfix: Successful assertion results of AssertFalse() in testcases are now reported correctly.    
+* Bugfix: Successful assertion results of AssertFalse() in testcases are now reported correctly.	
 
 === Active record ===
 * Optimization: Satori doesn't rebuild relations when an object is made persistent unless they have been used previously.

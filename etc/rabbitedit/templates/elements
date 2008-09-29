@@ -1,0 +1,9 @@
+<?php
+
+    class %s extends Element {
+
+        public function Render() {
+        }
+    }
+
+?>

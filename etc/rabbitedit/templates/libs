@@ -1,0 +1,11 @@
+<?php
+
+    class %sFinder extends Finder {
+        protected $mModel = '%s';
+    }
+
+    class %s extends Satori {
+        protected $mDbTableAlias = '%s';
+    }
+
+?>

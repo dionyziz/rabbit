@@ -26,6 +26,7 @@ def rabbitEdit( filename, editor, parents, svn ):
         parts = filename.split( '/' )
         parts.reverse()
         first = parts.pop()
+        source = ''
         if parts:
             parts.reverse()
             parts[ -1 ] = parts[ -1 ].split( '.', 1 )[ 0 ]
@@ -40,17 +41,17 @@ def rabbitEdit( filename, editor, parents, svn ):
                 else:
                     source = template % nameJoin( [ first[ :-1 ] ] + parts )
             except IOError:
-                source = ''
-            try:
-                if parents:
-                    makeParents( [ first ] + parts[ :-1 ], svn )
-                sourceFile = open( filename, 'w' )
-                sourceFile.write( source )
-                sourceFile.close()
-                if svn:
-                    execute( 'svn', 'add', filename )
-            except IOError, message:
-                sys.exit( message )
+                pass
+        try:
+            if parts:
+                makeParents( [ first ] + parts[ :-1 ], svn )
+            sourceFile = open( filename, 'w' )
+            sourceFile.write( source )
+            sourceFile.close()
+            if svn:
+                execute( 'svn', 'add', filename )
+        except IOError, message:
+            sys.exit( message )
     execute( editor, filename )
 
 usage = '''Usage:

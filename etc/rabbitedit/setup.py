@@ -15,5 +15,8 @@ setup(
     author_email = 'amikrop@gmail.com',
     description = 'Edit source code files of Rabbit projects.',
     scripts = [ 'rabbitedit' ],
-    data_files = [ ( '/etc/rabbitedit', data ) ]
+    data_files = (
+        ( '/etc/rabbitedit/templates', data ),
+        ( '/etc/rabbitedit', 'rabbitedit.conf' )
+    )
 )

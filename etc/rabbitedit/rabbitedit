@@ -4,23 +4,7 @@ import sys
 import os
 import subprocess
 import getopt
-
-usage = '''Usage:
-  %s [ options ] filename
-
-Options:
-  -h, --help            Show this help message and exit
-  -e ..., --editor=...  Set the source code editor
-  -p, --parents         Create parent directories as needed
-  -s, --svn             Svn add the created file
-  -c ..., --conf=...    Set the configuration file
-  -P, --no-parents      Do not create parent folders
-  -S, --no-svn          Do not svn add the created file
-''' % os.path.basename( sys.argv[ 0 ] )
-
-editor = os.getenv( 'EDITOR', 'vim' )
-parents = False
-svn = False
+import ConfigParser
 
 def execute( *args ):
     subprocess.call( args )
@@ -46,7 +30,7 @@ def rabbitEdit( filename, editor, parents, svn ):
             parts.reverse()
             parts[ -1 ] = parts[ -1 ].split( '.', 1 )[ 0 ]
             try:
-                templateFile = open( os.path.join( '/etc/rabbitedit', first ) )
+                templateFile = open( os.path.join( '/etc/rabbitedit/templates', first ) )
                 template = templateFile.read()
                 templateFile.close()
                 if first == 'libs':
@@ -69,28 +53,41 @@ def rabbitEdit( filename, editor, parents, svn ):
                 sys.exit( message )
     execute( editor, filename )
 
+usage = '''Usage:
+  %s [ options ] filename
+
+Options:
+  -h, --help            Show this help message and exit
+  -e ..., --editor=...  Set the source code editor
+  -p, --parents         Create parent directories as needed
+  -s, --svn             Svn add the created file
+  -c ..., --conf=...    Set the configuration file
+  -P, --no-parents      Do not create parent folders
+  -S, --no-svn          Do not svn add the created file
+''' % os.path.basename( sys.argv[ 0 ] )
+
 try:
     opts, args = getopt.getopt( sys.argv[ 1: ], 'he:psc:PS', ( 'help', 'editor=', 'parents', 'svn', 'conf=', 'no-parents', 'no-svn' ) )
     if len( args ) != 1:
         raise getopt.GetoptError, ''
 except getopt.GetoptError:
     sys.exit( usage )
-explicitlySet = {}
+
+config = {}
 for option, value in opts:
     if option in ( '-h', '--help' ):
         print usage
         sys.exit()
     if option in ( '-e', '--editor' ):
-        editor = value
+        config[ 'editor' ] = value
     elif option in ( '-p', '--parents' ):
-        parents = True
+        config[ 'parents' ] = True
     elif option in ( '-s', '--svn' ):
-        svn = True
+        config[ 'svn' ] = True
     elif option in ( '-c', '--conf' ):
-        conf = value
+        config[ 'conf' ] = value
     elif option in ( '-P', '--no-parents' ):
-        parents = False
+        config[ 'parents' ] = False
     else:
-        svn = False
-    explicitlySet[ option ] = None
+        config[ 'svn' ] = False
 rabbitEdit( args[ 0 ], editor, parents, svn )

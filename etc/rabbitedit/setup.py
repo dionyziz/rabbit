@@ -1,10 +1,10 @@
 from distutils.core import setup
 
-data = (
-    'templates/actions',
-    'templates/elements',
-    'templates/libs',
-    'templates/units'
+templates = (
+    'data/templates/actions',
+    'data/templates/elements',
+    'data/templates/libs',
+    'data/templates/units'
 )
 
 setup(
@@ -16,7 +16,7 @@ setup(
     description = 'Edit source code files of Rabbit projects.',
     scripts = [ 'rabbitedit' ],
     data_files = (
-        ( '/etc/rabbitedit/templates', data ),
-        ( '/etc/rabbitedit', [ 'rabbitedit.conf' ] )
+        ( '/etc/rabbitedit/templates', templates ),
+        ( '/etc/rabbitedit', [ 'data/rabbitedit.conf' ] )
     )
 )

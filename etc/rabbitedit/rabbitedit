@@ -54,7 +54,7 @@ def rabbitEdit( filename, editor, parents, svn ):
     execute( editor, filename )
 
 usage = '''Usage:
-  %s [ options ] filename
+  %s [options] filename
 
 Options:
   -h, --help            Show this help message and exit
@@ -100,7 +100,7 @@ try:
         editor = os.getenv( 'EDITOR', 'vim' )
     parents = config.get( 'parents', parser.getbool( 'rabbitedit', 'parents' ) )
     svn = config.get( 'svn', parser.getbool( 'rabbitedit', 'svn' ) )
-except ( IOError ConfigParser.Error ), message:
+except ( IOError, ConfigParser.Error ), message:
     sys.exit( message )
 
 rabbitEdit( args[ 0 ], editor, parents, svn )

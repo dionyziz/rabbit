@@ -98,8 +98,8 @@ try:
     editor = config.get( 'editor', parser.get( 'rabbitedit', 'editor' ) )
     if editor == 'default':
         editor = os.getenv( 'EDITOR', 'vim' )
-    parents = config.get( 'parents', parser.getbool( 'rabbitedit', 'parents' ) )
-    svn = config.get( 'svn', parser.getbool( 'rabbitedit', 'svn' ) )
+    parents = config.get( 'parents', parser.getboolean( 'rabbitedit', 'parents' ) )
+    svn = config.get( 'svn', parser.getboolean( 'rabbitedit', 'svn' ) )
 except ( IOError, ConfigParser.Error ), message:
     sys.exit( message )
 

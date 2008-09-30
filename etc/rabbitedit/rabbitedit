@@ -90,4 +90,17 @@ for option, value in opts:
         config[ 'parents' ] = False
     else:
         config[ 'svn' ] = False
+
+conffile = config.get( 'conf', '/etc/rabbitedit/rabbitedit.conf' )
+parser = ConfigParser.ConfigParser()
+try:
+    parser.read( conffile )
+    editor = config.get( 'editor', parser.get( 'rabbitedit', 'editor' ) )
+    if editor == 'default':
+        editor = os.getenv( 'EDITOR', 'vim' )
+    parents = config.get( 'parents', parser.getbool( 'rabbitedit', 'parents' ) )
+    svn = config.get( 'svn', parser.getbool( 'rabbitedit', 'svn' ) )
+except ( IOError ConfigParser.Error ), message:
+    sys.exit( message )
+
 rabbitEdit( args[ 0 ], editor, parents, svn )

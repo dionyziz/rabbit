@@ -7,6 +7,13 @@ import re
 import getopt
 import ConfigParser
 
+def unique( sequence ):
+	result = []
+	for item in sequence:
+		if item not in result:
+			result.append( item )
+	return result
+
 def execute( *args ):
     subprocess.call( args )
 
@@ -44,7 +51,7 @@ def rabbitEdit( filename, editor, parents, svn ):
                 template = templateFile.read()
                 templateFile.close()
                 if first == 'libs':
-                    name = nameJoin( set( parts ) )
+                    name = nameJoin( unique( parts ) )
                     values = tuple( [ name ] * 3 + [ plural( name.lower() ) ] )
                     source = template % values
                 else:

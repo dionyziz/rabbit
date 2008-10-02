@@ -17,6 +17,6 @@ setup(
     scripts = [ 'rabbitedit' ],
     data_files = (
         ( '/etc/rabbitedit/templates', templates ),
-        ( '/etc/rabbitedit', [ 'data/rabbitedit.conf' ] )
+        ( '/etc/rabbitedit', [ 'data/rabbitedit.conf', 'data/rules' ] )
     )
 )

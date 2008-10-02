@@ -3,6 +3,7 @@
 import sys
 import os
 import subprocess
+import re
 import getopt
 import ConfigParser
 
@@ -11,6 +12,14 @@ def execute( *args ):
 
 def nameJoin( args ):
     return ''.join( a.capitalize() for a in args )
+
+def plural( noun ):
+	rules = open( '/etc/rabbitedit/rules' )
+	for line in rules:
+		pattern, search, replace = line.split()
+		if re.search( pattern, noun ):
+			rules.close()
+			return re.sub( search, replace, noun )
 
 def makeParents( dirs, svn ):
     path = ''
@@ -36,7 +45,7 @@ def rabbitEdit( filename, editor, parents, svn ):
                 templateFile.close()
                 if first == 'libs':
                     name = nameJoin( set( parts ) )
-                    values = tuple( [ name ] * 3 + [ name.lower() + 's' ] )
+                    values = tuple( [ name ] * 3 + [ plural( name.lower() ) ] )
                     source = template % values
                 else:
                     source = template % nameJoin( [ first[ :-1 ] ] + parts )

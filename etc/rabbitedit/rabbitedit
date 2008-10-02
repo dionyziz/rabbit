@@ -35,7 +35,7 @@ def rabbitEdit( filename, editor, parents, svn ):
                 template = templateFile.read()
                 templateFile.close()
                 if first == 'libs':
-                    name = parts[ -1 ].capitalize()
+                    name = nameJoin( set( parts ) )
                     values = tuple( [ name ] * 3 + [ name.lower() + 's' ] )
                     source = template % values
                 else:

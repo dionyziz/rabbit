@@ -58,6 +58,12 @@ def rabbitEdit( filename, editor, parents, svn ):
                     source = template % nameJoin( [ first[ :-1 ] ] + parts )
             except IOError:
                 pass
+        if not source:
+            ext = os.path.splitext( filename )[ 1 ]
+            if ext == '.php':
+                templateFile = open( '/etc/rabbitedit/templates/default' )
+                source = templateFile.read()
+                templateFile.close()
         try:
             if parts:
                 makeParents( [ first ] + parts[ :-1 ], svn )

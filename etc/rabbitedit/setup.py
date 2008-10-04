@@ -2,6 +2,7 @@ from distutils.core import setup
 
 templates = (
     'data/templates/actions',
+    'data/templates/default',
     'data/templates/elements',
     'data/templates/libs',
     'data/templates/units'

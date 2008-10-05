@@ -65,7 +65,7 @@ def rabbitEdit( filename, parents, svn ):
                 source = templateFile.read()
                 templateFile.close()
         try:
-            if parts:
+            if parents and parts:
                 makeParents( [ first ] + parts[ :-1 ], svn )
             sourceFile = open( filename, 'w' )
             sourceFile.write( source )

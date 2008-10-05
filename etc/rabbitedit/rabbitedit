@@ -37,7 +37,7 @@ def makeParents( dirs, svn ):
             if svn:
                 execute( 'svn', 'add', path )
 
-def rabbitEdit( filename, editor, parents, svn ):
+def rabbitEdit( filename, parents, svn ):
     if not os.path.exists( filename ):
         parts = filename.split( '/' )
         parts.reverse()
@@ -74,25 +74,22 @@ def rabbitEdit( filename, editor, parents, svn ):
                 execute( 'svn', 'add', filename )
         except IOError, message:
             sys.exit( message )
-    execute( editor, filename )
 
 usage = '''Usage:
-  %s [options] filename
+  %s [options] filename1 [filename2 [...]]
 
 Options:
   -h, --help            Show this help message and exit
   -e ..., --editor=...  Set the source code editor
   -p, --parents         Create parent directories as needed
-  -s, --svn             Svn add the created file
+  -s, --svn             Svn add the created file(s)
   -c ..., --conf=...    Set the configuration file
   -P, --no-parents      Do not create parent folders
-  -S, --no-svn          Do not svn add the created file
+  -S, --no-svn          Do not svn add the created file(s)
 ''' % os.path.basename( sys.argv[ 0 ] )
 
 try:
     opts, args = getopt.getopt( sys.argv[ 1: ], 'he:psc:PS', ( 'help', 'editor=', 'parents', 'svn', 'conf=', 'no-parents', 'no-svn' ) )
-    if len( args ) != 1:
-        raise getopt.GetoptError, ''
 except getopt.GetoptError:
     sys.exit( usage )
 
@@ -126,4 +123,6 @@ try:
 except ( IOError, ConfigParser.Error ), message:
     sys.exit( message )
 
-rabbitEdit( args[ 0 ], editor, parents, svn )
+for filename in args:
+    rabbitEdit( filename, parents, svn )
+execute( editor, *args )

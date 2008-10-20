@@ -10,7 +10,7 @@ setup(
     description = 'Edit source code files of Rabbit projects.',
     scripts = [ 'rabbitedit' ],
     data_files = (
-        ( '/etc/rabbitedit', glob.glob( 'data/*' ) ),
+        ( '/etc/rabbitedit', ( 'data/rabbitedit.conf', 'data/rules' ) ),
         ( '/etc/rabbitedit/templates', glob.glob( 'data/templates/*' ) )
     )
 )

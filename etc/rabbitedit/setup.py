@@ -1,12 +1,5 @@
 from distutils.core import setup
-
-templates = (
-    'data/templates/actions',
-    'data/templates/default',
-    'data/templates/elements',
-    'data/templates/libs',
-    'data/templates/units'
-)
+import glob
 
 setup(
     name = 'rabbitedit',
@@ -17,7 +10,7 @@ setup(
     description = 'Edit source code files of Rabbit projects.',
     scripts = [ 'rabbitedit' ],
     data_files = (
-        ( '/etc/rabbitedit/templates', templates ),
-        ( '/etc/rabbitedit', [ 'data/rabbitedit.conf', 'data/rules' ] )
+        ( '/etc/rabbitedit', glob.glob( 'data/*' ) ),
+        ( '/etc/rabbitedit/templates', glob.glob( 'data/templates/*' ) )
     )
 )

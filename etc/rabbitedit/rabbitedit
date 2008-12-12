@@ -46,6 +46,7 @@ def rabbitEdit( filename, parents, svn ):
         if parts:
             parts.reverse()
             parts[ -1 ] = parts[ -1 ].split( '.', 1 )[ 0 ]
+            parts[ -1 ] = parts[ -1 ].rstrip('_')
             try:
                 templateFile = open( os.path.join( '/etc/rabbitedit/templates', first ) )
                 template = templateFile.read()

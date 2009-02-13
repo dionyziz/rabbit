@@ -17,7 +17,7 @@ def unique( sequence ):
 def execute( *args ):
     subprocess.call( args )
 
-def nameJoin( args ):
+def name_join( args ):
     return ''.join( a.capitalize() for a in args )
 
 def plural( noun ):
@@ -28,7 +28,7 @@ def plural( noun ):
 			rules.close()
 			return re.sub( search, replace, noun )
 
-def makeParents( dirs, svn ):
+def make_parents( dirs, svn ):
     path = ''
     for subdir in dirs:
         path = os.path.join( path, subdir )
@@ -37,7 +37,7 @@ def makeParents( dirs, svn ):
             if svn:
                 execute( 'svn', 'add', path )
 
-def rabbitEdit( filename, parents, svn ):
+def rabbit_edit( filename, parents, svn ):
     if not os.path.exists( filename ):
         parts = filename.split( '/' )
         parts.reverse()
@@ -48,29 +48,29 @@ def rabbitEdit( filename, parents, svn ):
             parts[ -1 ] = parts[ -1 ].split( '.', 1 )[ 0 ]
             parts[ -1 ] = parts[ -1 ].lstrip( '_' )
             try:
-                templateFile = open( os.path.join( '/etc/rabbitedit/templates', first ) )
-                template = templateFile.read()
-                templateFile.close()
+                template_file = open( os.path.join( '/etc/rabbitedit/templates', first ) )
+                template = template_file.read()
+                template_file.close()
                 if first == 'libs':
-                    name = nameJoin( unique( parts ) )
+                    name = name_join( unique( parts ) )
                     values = tuple( [ name ] * 3 + [ plural( name.lower() ) ] )
                     source = template % values
                 else:
-                    source = template % nameJoin( [ first[ :-1 ] ] + parts )
+                    source = template % name_join( [ first[ :-1 ] ] + parts )
             except IOError:
                 pass
         if not source:
             ext = os.path.splitext( filename )[ 1 ]
             if ext == '.php':
-                templateFile = open( '/etc/rabbitedit/templates/default' )
-                source = templateFile.read()
-                templateFile.close()
+                template_file = open( '/etc/rabbitedit/templates/default' )
+                source = template_file.read()
+                template_file.close()
         try:
             if parents and parts:
-                makeParents( [ first ] + parts[ :-1 ], svn )
-            sourceFile = open( filename, 'w' )
-            sourceFile.write( source )
-            sourceFile.close()
+                make_parents( [ first ] + parts[ :-1 ], svn )
+            source_file = open( filename, 'w' )
+            source_file.write( source )
+            source_file.close()
             if svn:
                 execute( 'svn', 'add', filename )
         except IOError, message:
@@ -125,5 +125,5 @@ except ( IOError, ConfigParser.Error ), message:
     sys.exit( message )
 
 for filename in args:
-    rabbitEdit( filename, parents, svn )
+    rabbit_edit( filename, parents, svn )
 execute( editor, *args )

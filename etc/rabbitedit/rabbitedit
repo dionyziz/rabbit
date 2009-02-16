@@ -8,11 +8,13 @@ import getopt
 import ConfigParser
 
 def unique( sequence ):
-	result = []
-	for item in sequence:
-		if item not in result:
-			result.append( item )
-	return result
+    s = set( sequence )
+    result = []
+    for item in sequence:
+        if item in s:
+            result.append( item )
+            s.discard( item )
+    return result
 
 def execute( *args ):
     subprocess.call( args )

@@ -42,11 +42,9 @@ def make_parents( dirs, svn ):
 def rabbit_edit( filename, parents, svn ):
     if not os.path.exists( filename ):
         parts = filename.split( '/' )
-        parts.reverse()
-        first = parts.pop()
+        first = parts.pop( 0 )
         source = ''
         if parts:
-            parts.reverse()
             parts[ -1 ] = parts[ -1 ].split( '.', 1 )[ 0 ]
             parts[ -1 ] = parts[ -1 ].lstrip( '_' )
             try:

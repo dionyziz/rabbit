@@ -571,6 +571,9 @@
                     $this->mDefaultValues[ $attributename ] = $this->mCurrentValues[ $attributename ];
                     $this->mCurrentValues[ $attributename ] = false; // revert to false (doesn't invoke attribute setter)
                 }
+                else if ( $this->mDbColumns[ $fieldname ]->Default !== '' ) {
+                    $this->mDefaultValues[ $attributename ] = $this->mDbColumns[ $fieldname ]->Default;
+                }
                 else {
                     $this->mDefaultValues[ $attributename ] = $this->mDbColumns[ $fieldname ]->CastValueToNativeType( false );
                 }

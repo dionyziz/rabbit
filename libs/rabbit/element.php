@@ -85,7 +85,7 @@
             $params = array(); // a list of the values of the significant arguments, in order
             foreach ( $significant as $pos ) {
                 w_assert( is_int( $pos ) );
-                w_assert( isset( $args[ $pos ] ) );
+                w_assert( isset( $args[ $pos ] ), 'Persistent element significant argument must be defined; not passed for argument ' . $pos . ' of element `' . $elementpath . '\'' );
                 $params[] = $args[ $pos ];
                 w_assert( is_scalar( $args[ $pos ] ), 'Persistent element significant argument must be scalar; ' . gettype( $args[ $pos ] ) . ' given for argument ' . $pos . ' of element `' . $elementpath . '\'' );
             }
@@ -103,6 +103,22 @@
             echo $ret[ 0 ];
             // return its cached data (usually empty)
             return $ret[ 1 ];
+        }
+        static public function ClearFromCache( /* $elementpath, $param1, $param2, ... */ ) {
+            global $mc;
+            global $water;
+
+            $args = func_get_args();
+            $elementpath = array_shift( $args );
+
+            $mtime = self::GetPersistentElementMtime( $elementpath );
+            // it's a persistent element, check cache
+            foreach ( $args as $i => $arg ) {
+                w_assert( is_scalar( $arg ), 'Persistent element significant argument must be scalar; ' . gettype( $arg ) . ' given for significant argument ' . $pos . ' of element `' . $elementpath . '\' when clearing cache' );
+            }
+            $sig = self::EncodeArguments( $args ); // retrieve invokation signature (string)
+            $mc->delete( 'persistent:' . $elementpath . ':' . $sig . ':' . $mtime );
+            $water->Trace( 'Persistent element CLEAR: ' . $elementpath . ' ( "' . implode( '", "', $args ) . '" )' );
         }
         static public function IncludeFile( $elementpath ) {
             w_assert( is_string( $elementpath ) && strlen( $elementpath ) );
@@ -205,6 +221,8 @@
             }
             
             self::$mMasterElementAlias = $req[ 'p' ];
+
+            $water->SetPageURL( $_SERVER[ 'PHP_SELF' ] . ' - ' . self::$mMasterElementAlias );
 
             unset( $req[ 'p' ] );
 

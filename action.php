@@ -3,11 +3,11 @@
     global $libs;
     global $page;
     global $rabbit_settings;
-    
+
     require_once 'libs/rabbit/rabbit.php';
 
     Rabbit_Construct( 'action' );
-    
+
     if ( !isset( $_GET[ 'p' ] ) ) {
         return Redirect();
     }
@@ -39,8 +39,12 @@
         }
     }
     
+    $water->Trace( 'Special page type: ACTION' );
+
     $p = $_GET[ 'p' ];
     $req = array_merge( $_POST, $_FILES );
+
+    $water->SetPageURL( $_SERVER[ 'PHP_SELF' ] . ' - ' . $p );
     
     Rabbit_ClearPostGet();
 

@@ -20,13 +20,13 @@
     // set the include path that will be used from now on, relative to the rootdir of our site
     set_include_path( get_include_path() . PATH_SEPARATOR . $rabbit_settings[ 'rootdir' ] );
     
+    // enable the debugging library if we're not on a production environment
+    if ( !defined( 'WATER_ENABLE' ) ) {
+        define( 'WATER_ENABLE', !$rabbit_settings[ 'production' ] );
+    }
+    
     // load the debugging library
-    $water = require_once 'libs/rabbit/water.php';
-    $water->SetSetting( 'window_url'   , $rabbit_settings[ 'webaddress' ] . '/?p=debug' );
-    $water->SetSetting( 'images_url'   , $rabbit_settings[ 'imagesurl' ] . 'water/' );
-    $water->SetSetting( 'css_url'      , $rabbit_settings[ 'webaddress' ] . '/css/water.css' );
-    $water->SetSetting( 'server_root'  , $rabbit_settings[ 'rootdir' ] );
-    $water->SetSetting( 'calltracelvl' , 8 );
+    require_once 'libs/rabbit/water/water.php';
     
     w_assert( isset( $rabbit_settings[ 'rootdir' ] ), "`rootdir' setting is not defined" );
     w_assert( isset( $rabbit_settings[ 'applicationname' ] ), "`applicationname' setting is not defined" );
@@ -47,11 +47,6 @@
         setlocale( LC_ALL, $rabbit_settings[ 'locale' ] );
     }
 
-    // enable the debugging library if we're not on a production environment
-    if ( !$rabbit_settings[ 'production' ] ) {
-        $water->Enable(); // might be disabled later using ->Disable() if you wish
-    }
-    
     require_once 'libs/rabbit/mask.php';
     
     // load the libraries system -- it will be used to load everything else
@@ -168,7 +163,7 @@
     if ( function_exists( 'Project_OnBeforeSessionStart' ) ) {
         Project_OnBeforeSessionStart();
     }
-    session_start(); 
+    session_start();
     registerglobals_off(); // this needs to be performed again now that session_start has been fired
     if ( function_exists( 'Project_OnAfterSessionStart' ) ) {
         Project_OnAfterSessionStart();

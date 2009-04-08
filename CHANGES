@@ -1,3 +1,33 @@
+== 0.7.21000 ==
+=== Type safety ===
+* Added the ability to specify a maximum and minimum for tInteger domains.
+* Added the ability to specify a maximum length for tString domains.
+
+=== Database ===
+* Added support for a default database when using multiple databases. (indy)
+
+=== Active record ===
+* Added support to convert collections to arrays.
+* Added the ability to make low-priority database updates.
+* Bugfix: Default field values are automatically reflected as default domain-level attribute values. (indy)
+* Bugfix: Fixed a problem that didn't allow insertions on your non-primary database.
+
+=== Water ===
+* Migrated to centralized Water (not yet fully functional).
+
+=== Elements handling ===
+* Added the ability to remove a cached persistent element from cache on-demand.
+
+=== Comet ===
+* Added primitive comet events support (not yet fully functional; required separate implementation of comet functions).
+
+=== Helpers ===
+* Added a pseudorandom 32-digit hex hash generator.
+* Bugfix: Allowed checking for Email result value validy. (petros)
+
+=== Others ===
+* Added rabbitedit (indy)
+
 == 0.7.15000 ==
 === Database ===
 * Added the ability to bind and properly escape "LIKE" SQL arguments.

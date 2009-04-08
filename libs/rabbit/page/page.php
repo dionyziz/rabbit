@@ -37,6 +37,8 @@ abstract class Page {
         }
         $this->mNaturalLanguage = $languagecode;
     }
+    protected function OutputHeaders() {
+    }
     final protected function OutputStart() {
         ob_start();
         // $this->mOutputLevel = ob_get_level();
@@ -70,7 +72,7 @@ abstract class Page {
         
         $water->Trace( $libs->CountLoaded() . ' libraries loaded before rendering' );
         $this->GenerateBody();
-        
+        $this->OutputHeaders();
         $this->WaterLink();
         
         if ( $this->mRedirection instanceof HTTPRedirection ) {
@@ -94,6 +96,8 @@ abstract class Page {
         $this->mTitle = $title;
     }
     public function AttachMainElement( $mainelementid , $req ) {
+        global $water;
+
         w_assert( is_array( $req ) );
         
         $this->mMainElements[] = array(
@@ -114,20 +118,15 @@ final class PageEmpty extends Page {
 
 class PageHTML extends Page {
     protected $mSupportsXML;
-    protected $mStylesheets;
-    protected $mScripts;
-    protected $mScriptsInline;
+    protected $mStylesheets = array();
+    protected $mScripts = array();
+    protected $mScriptsInline = array();
     protected $mBase;
-    protected $mMeta;
-    protected $mFavIcon;
+    protected $mMeta = array();
+    protected $mFavIcon = false;
     
     public function __construct() {
         $this->mElements      = array();
-        $this->mScripts       = array();
-        $this->mScriptsInline = array();
-        $this->mStylesheets   = array();
-        $this->mMeta          = array();
-        $this->mFavIcon       = false;
         $this->CheckXML();
         parent::__construct();
     }
@@ -138,13 +137,12 @@ class PageHTML extends Page {
         $this->mFavIcon = $favicon;
     }
     protected function OutputPage() {
-        $this->OutputHeaders();
         $this->OutputHTMLStart();
         $this->OutputHTMLHeader();
         $this->OutputHTMLMain();
         $this->OutputHTMLEnd();
     }
-    private function OutputHeaders() {
+    protected function OutputHeaders() {
         if ( $this->mSupportsXML ) {
             header( "Content-Type: application/xhtml+xml; charset=utf-8" );
         }
@@ -273,7 +271,7 @@ class PageHTML extends Page {
         $this->mBase = $base;
     }
     public function AddMeta( $name, $content ) {
-        w_assert( preg_match( '#^[a-z]+$#', $name ) );
+        w_assert( preg_match( '#^[A-Za-z-]+$#', $name ) );
         $this->mMeta[ $name ] = $content;
     }
     public function AttachStylesheet( $filename, $ieversion = false ) {
@@ -315,11 +313,9 @@ class PageHTML extends Page {
         
         // keep in mind that profiles and alerts beyond this point will not be dumped
         if ( $this->mDoWaterDump ) {
-            $water->SetSetting( 'strict', $this->XMLStrict() );
             ob_start();
-            $water->GenerateHTML();
+            $water->Post();
             $this->mBody = ob_get_clean() . $this->mBody;
-            $this->AttachStylesheet( 'css/water.css' );
         }
     }
 
@@ -432,7 +428,7 @@ final class PageCoala extends Page {
         
         parent::__construct();
     }
-    private function OutputHeaders() {
+    protected function OutputHeaders() {
         header( 'Content-type: text/javascript; charset=utf-8' );
     }
     public function Output() {

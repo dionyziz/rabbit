@@ -8,6 +8,8 @@
 
     Rabbit_Construct( 'action' );
 
+    $libs->Load( 'rabbit/helpers/http' );
+
     if ( !isset( $_GET[ 'p' ] ) ) {
         return Redirect();
     }

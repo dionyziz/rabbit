@@ -10,6 +10,9 @@
         'port'            => 80,
         'webaddress'      => 'http://example.org/testapp',
         'timezone'        => 'UTC',
+        'memcache'        => array(
+                'type'     => 'dummy'
+        ),
         'language'        => 'en',
         'databases'       => array( // prefix all keys with "db"
             'db' => array(

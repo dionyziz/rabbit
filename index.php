@@ -12,7 +12,7 @@
     */
 
     global $page;
-    
+
     require_once 'libs/rabbit/rabbit.php';
     
     Rabbit_Construct( 'HTML' );

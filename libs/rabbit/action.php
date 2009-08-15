@@ -1,7 +1,8 @@
 <?php
     final class Actions { // do-and-redirect controllers handler
-        public function Request( $p , $req ) {
+        public function Request( $p, $req ) {
             global $water;
+            global $libs;
             
             if (   !isset( $p ) 
                 || !preg_match( '#^[a-zA-Z0-9/]+$#' , $p ) ) {

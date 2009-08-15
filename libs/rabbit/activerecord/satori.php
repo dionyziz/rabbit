@@ -57,7 +57,7 @@
             }
             $this->mQueryModel = $queryModel;
             $this->mTargetModelClass = $targetModelClass;
-            w_assert( class_exists( $this->mTargetModelClass ), 'Model class `' . $this->mTargetModelClass . '\' used in HasOne relation of ' . get_class( $this->mQueryModel ) . ' is not defined' );
+            // don't assert the class exists -- it may be loaded later
             $this->mForeignKey = $foreignKey;
             $this->mAttribute2DbField = $queryModel->Attribute2DbField;
             $this->mCurrentArgs = false;
@@ -108,6 +108,8 @@
             return $modified;
         }
         protected function MakeObj() {
+            w_assert( class_exists( $this->mTargetModelClass ), 'Model class `' . $this->mTargetModelClass . '\' used in HasOne relation of ' . get_class( $this->mQueryModel ) . ' is not defined' );
+            
             // instantiate $className with a variable number of arguments (the number of columns in the primary key can vary)
             $class = New ReflectionClass( $this->mTargetModelClass );
             $args = $this->Args();
@@ -123,7 +125,7 @@
             return $target;
         }
         public function CopyFrom( $obj ) {
-            w_assert( is_object( $obj ), 'CopyFrom on HasOne relation of ' . get_class( $this->mQueryModel ) . ' must be an object'  );
+            w_assert( is_object( $obj ), 'CopyFrom on HasOne relation of ' . get_class( $this->mQueryModel ) . ' must be an object, ' . gettype( $obj ) . ' given'  );
             w_assert( $obj instanceof $this->mTargetModelClass, 'CopyFrom on HasOne relation of ' . get_class( $this->mQueryModel ) . ' must be a `' . $this->mTargetModelClass . ' instance, but ' . get_class( $obj ) . ' given'  );
 
             $this->mRetrieved = $obj;
@@ -155,9 +157,7 @@
             return $target->IsSameAs( $this->mFinderClass, $this->mFinderMethod, $this->mForeignKey );
         }
         public function __construct( $queryModel, $finderClass, $finderMethod, $foreignKey ) {
-            if ( !class_exists( $finderClass ) ) {
-                throw New SatoriException( 'Finder class `' . $finderClass . '\' used in HasMany relation of `' . get_class( $this ) . '\' specified for HasMany relation does not exist' );
-            }
+            // don't assert finder class exists -- it may be loaded later
             $this->mQueryModel = $queryModel;
             $this->mFinderClass = $finderClass;
             $this->mFinderMethod = $finderMethod;
@@ -167,6 +167,9 @@
             return false; // too expensive to detect automatically
         }
         public function MakeObj() {
+            if ( !class_exists( $this->mFinderClass ) ) {
+                throw New SatoriException( 'Finder class `' . $this->mFinderClass . '\' used in HasMany relation of `' . get_class( $this ) . '\' specified for HasMany relation does not exist' );
+            }
             $finder = New $this->mFinderClass(); // MAGIC!
             if ( !is_subclass_of( $finder, 'Finder' ) ) {
                 throw New SatoriException( 'Finder class `' . $this->mFinderClass . '\' used in HasMany relation of `' . get_class( $this ) . '\' does not extend the "Finder" base' );
@@ -246,6 +249,18 @@
             }
             return $this->mCurrentValues[ $key ];
         }
+        public function GetDb() {
+            return $this->mDb;
+        }
+        public function GetDbTable() {
+            return $this->mDbTable;
+        }
+        public function GetDbFields() {
+            return $this->mDbFields;
+        }
+        public function GetPrimaryKeyFields() {
+            return $this->mPrimaryKeyFields;
+        }
         public function __set( $name, $value ) {
             if ( $this->mAllowRelationDefinition && $value instanceof Relation ) {
                 if ( isset( $this->mOldRelations[ $name ] ) ) {
@@ -273,6 +288,9 @@
             }
             
             $this->mCurrentValues[ $name ] = $value;
+        }
+        public function CopyRelationFrom( $relation, $object ) {
+            $this->mRelations[ $relation ]->CopyFrom( $object );
         }
         protected function Relations() {
             // override me
@@ -575,9 +593,6 @@
                 if ( $this->mCurrentValues[ $attributename ] !== false ) {
                     $this->mDefaultValues[ $attributename ] = $this->mCurrentValues[ $attributename ];
                     $this->mCurrentValues[ $attributename ] = false; // revert to false (doesn't invoke attribute setter)
-                }
-                else if ( $this->mDbColumns[ $fieldname ]->Default !== '' ) {
-                    $this->mDefaultValues[ $attributename ] = $this->mDbColumns[ $fieldname ]->Default;
                 }
                 else {
                     $this->mDefaultValues[ $attributename ] = $this->mDbColumns[ $fieldname ]->CastValueToNativeType( false );

@@ -1,3 +1,22 @@
+== 0.7.27000 ==
+=== Active record ===
+* Added FindByIds() function in the base Finder class. (abresas)
+* Added the ability for custom collections. (abresas)
+* Added generalized relations copying in base Satori class. (abresas)
+* Added relation preloading ability in collections. (abresas)
+* Added collection to array function. (abresas)
+* Optimization: Added the ability to not load libraries of Satori relations if the relations are not used.
+
+=== Helpers ===
+* Bugfix: Email() function did not always display From field correctly.
+
+=== Water ===
+* Centralized debugging is now possible.
+
+=== Others ===
+* Bugfix: Made memcache optional by default. It previously required you to specify a memcache server, or explicitly define as optional.
+* Optimization: Removed a lot of libraries that were loaded by default. They can now be loaded optionally.
+
 == 0.7.21000 ==
 === Type safety ===
 * Added the ability to specify a maximum and minimum for tInteger domains.

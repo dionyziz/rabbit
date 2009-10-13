@@ -21,7 +21,7 @@
             // place element calls to footers and tracking scripts here
             
             // pass
-            return $res;
+            return $res[ 0 ];
         }
     }
 ?>

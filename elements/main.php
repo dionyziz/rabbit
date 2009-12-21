@@ -8,9 +8,10 @@
             // $page->AttachScript( 'js/main.js' );
 
             ob_start();
-            $res = Element::MasterElement();
+            $info = Element::MasterElement();
             $master = ob_get_clean();
-            
+            $res = $info[ 0 ];
+
             // place element calls to headers here
             if ( $res === false ) { // If the page requested is not in the pages available by pagemap
                 Element( '404' );

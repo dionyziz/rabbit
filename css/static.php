@@ -39,7 +39,9 @@
         'txt'  => 'text/plain',
         'html' => 'text/html',
         'js'   => 'text/javascript',
-        'css'  => 'text/css'
+        'css'  => 'text/css',
+        'xsl'  => 'text/xml',
+        'xml'  => 'text/xml'
     );
     
     if ( !isset( $EXTENSION2MIME[ strtolower( $extension ) ] ) ) {
